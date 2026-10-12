@@ -117,10 +117,11 @@ export type ServerSignal = z.infer<typeof ServerSignal>;
 const Coord = z.number().min(-1).max(2);
 const Uint32 = z.number().int().min(0).max(0xffff_ffff);
 
+// Literales explícitos: con `.split('')` el tipo se ensancha a string y se pierde el chequeo en compilación.
 export const KEY_NAMES = [
-  ...'abcdefghijklmnopqrstuvwxyz'.split(''),
-  ...'0123456789'.split(''),
-  ...Array.from({ length: 12 }, (_, i) => `f${i + 1}`),
+  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+  'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12',
   'escape',
   'tab',
   'enter',

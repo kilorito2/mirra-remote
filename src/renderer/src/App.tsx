@@ -44,6 +44,12 @@ export function App({ api }: { api: KrUiApi }) {
 
       <Section title="Esta PC">
         <Toggle label="Iniciar con Windows" hint="Queda en la bandeja, sin abrir la ventana" checked={state.settings.startWithWindows} onChange={(on) => void api.setStartWithWindows(on)} />
+        <Toggle
+          label="Codificación por hardware"
+          hint="Más fluida. Si la imagen no llega, se desactiva sola. Cambiarla reinicia la app."
+          checked={state.settings.hardwareEncoding}
+          onChange={(on) => void api.setHardwareEncoding(on)}
+        />
         <div>
           <button
             type="button"

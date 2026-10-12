@@ -20,7 +20,7 @@ test.afterEach(async () => {
 test('llega el video de la PC al Chrome del emulador', async () => {
   const opened = await openViaIntent(`${baseUrl(ANDROID_PORT)}/#t=${await kr.hook('token')}`);
   browser = opened.browser;
-  const stats = await expectVideoFlowing(opened.page);
+  const stats = await expectVideoFlowing(opened.page, () => kr.hook('startActivity'));
   expect(stats.frameWidth).toBeGreaterThan(0);
   console.info(`Android: codec=${stats.codec ?? '?'} ${stats.frameWidth}x${stats.frameHeight}`);
   // Captura del emulador para revisarla a ojo (tests/android/artifacts).

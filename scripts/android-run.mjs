@@ -1,7 +1,7 @@
 // Suite E2E con el emulador Android: arranca el AVD remote-test si hace falta, prepara adb reverse
 // y corre Playwright `_android`. Ver ADR-0006.
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, openSync } from 'node:fs';
 import { join } from 'node:path';
 import { androidEnv, AVD_NAME } from './android-env.mjs';
 
@@ -29,9 +29,14 @@ const running = adb('devices').stdout.split('\n').some((l) => /^emulator-\d+\s+d
 let emulator = null;
 if (!running) {
   console.info(`Arrancando el emulador ${AVD_NAME}…`);
-  emulator = spawn(env.emulator, ['-avd', AVD_NAME, '-no-snapshot-save', '-no-boot-anim', '-gpu', 'auto', '-netdelay', 'none', '-netspeed', 'full'], {
+  const artifacts = join(import.meta.dirname, '..', 'tests', 'android', 'artifacts');
+  mkdirSync(artifacts, { recursive: true });
+  const logFd = openSync(join(artifacts, 'emulator.log'), 'w');
+  // Render por software: con el GPU de la PC, Chrome del emulador se caía al crear el contexto GL
+  // y el driver quedaba degradado; con Vulkan por software (SwiftShader) el emulador se caía (ver PROGRESS Fase 3).
+  emulator = spawn(env.emulator, ['-avd', AVD_NAME, '-no-snapshot-save', '-no-boot-anim', '-gpu', 'swiftshader_indirect', '-feature', '-Vulkan', '-netdelay', 'none', '-netspeed', 'full'], {
     env: env.processEnv,
-    stdio: 'ignore',
+    stdio: ['ignore', logFd, logFd],
     detached: false,
   });
   emulator.on('exit', (code) => {

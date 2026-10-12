@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain, type IpcMainEvent, type WebContents } from 'electron';
 import type { QualityPreset } from '@shared/constants';
 import { HostEvent, HostInput, HostSignal, type HostCommand, type PeerState, type SignalToHost } from '@shared/hostIpc';
-import type { ControlFromPc } from '@shared/protocol';
+import type { ControlFromPc, InputFastFromPc } from '@shared/protocol';
 import type { ScreenSource } from './ports/ScreenSource';
 import type { HostBridge } from './session/sessionManager';
 import { hardenWebContents, isPageUrl, loadPage, securePreferences } from './windows';
@@ -16,7 +16,12 @@ export interface HostBridgeDeps {
   onChannel: (label: 'input-fast' | 'control' | 'file', open: boolean) => void;
   /** El renderer host murió o se cerró: hay que soltar el input y cortar. */
   onHostGone: () => void;
+  /** La captura arrancó pero no hubo oferta a tiempo (p. ej. encoder por hardware colgado). */
+  onStall: () => void;
 }
+
+/** Si en este tiempo no sale la primera oferta, se considera colgado el host. */
+export const OFFER_TIMEOUT_MS = 10_000;
 
 /**
  * Lado PC de WebRTC: una ventana oculta (`backgroundThrottling: false`) que captura la pantalla
@@ -36,7 +41,9 @@ export class ElectronHostBridge implements HostBridge {
     ipcMain.on('host:signal', (e, raw: unknown) => {
       if (!this.fromHost(e)) return;
       const msg = HostSignal.safeParse(raw);
-      if (msg.success) deps.toPeer(msg.data);
+      if (!msg.success) return;
+      if (msg.data.t === 'rtc.description') this.clearStall();
+      deps.toPeer(msg.data);
     });
     ipcMain.on('host:event', (e, raw: unknown) => {
       if (!this.fromHost(e)) return;
@@ -74,6 +81,11 @@ export class ElectronHostBridge implements HostBridge {
     void this.ensureWindow().then(() => {
       const { preset, audio } = this.deps.settings();
       this.send({ t: 'session.start', resume: opts.resume, displayId: this.displayId, preset, audio });
+      this.clearStall();
+      this.stallTimer = setTimeout(() => {
+        this.stallTimer = null;
+        this.deps.onStall();
+      }, OFFER_TIMEOUT_MS);
     });
   }
 
@@ -84,6 +96,7 @@ export class ElectronHostBridge implements HostBridge {
   }
 
   stop(): void {
+    this.clearStall();
     this.peerState = 'closed';
     this.send({ t: 'session.stop' });
   }
@@ -111,7 +124,17 @@ export class ElectronHostBridge implements HostBridge {
     this.send({ t: 'control.send', msg });
   }
 
+  sendFast(msg: InputFastFromPc): void {
+    this.send({ t: 'fast.send', msg });
+  }
+
   private resolveReady: (() => void) | null = null;
+  private stallTimer: NodeJS.Timeout | null = null;
+
+  private clearStall(): void {
+    if (this.stallTimer) clearTimeout(this.stallTimer);
+    this.stallTimer = null;
+  }
 
   private ensureWindow(): Promise<void> {
     if (this.win && !this.win.isDestroyed() && this.ready) return this.ready;
@@ -124,6 +147,10 @@ export class ElectronHostBridge implements HostBridge {
     });
     hardenWebContents(win.webContents);
     win.webContents.on('render-process-gone', () => this.gone(win));
+    // Los errores del host (captura, negociación) quedan en la consola de main para diagnosticar.
+    win.webContents.on('console-message', (event) => {
+      if (event.level === 'error' || event.level === 'warning') console.error('[kr] host console:', event.message);
+    });
     win.on('closed', () => this.gone(win));
     this.win = win;
     this.ready = new Promise<void>((resolve) => {

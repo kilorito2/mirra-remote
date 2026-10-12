@@ -82,7 +82,7 @@ async function ensureAvd() {
   }
   // Teclado en pantalla (Gboard) para probar el flujo real de teclado móvil; más RAM para Chrome + WebRTC.
   const configPath = join(avdDir, 'config.ini');
-  const wanted = { 'hw.keyboard': 'no', 'hw.ramSize': '4096', 'hw.gpu.enabled': 'yes', 'hw.gpu.mode': 'auto' };
+  const wanted = { 'hw.keyboard': 'no', 'hw.ramSize': '4096', 'hw.gpu.enabled': 'yes', 'hw.gpu.mode': 'swiftshader_indirect' };
   const lines = readFileSync(configPath, 'utf8').split(/\r?\n/).filter((l) => l && !(l.split('=')[0]?.trim() in wanted));
   for (const [k, v] of Object.entries(wanted)) lines.push(`${k}=${v}`);
   writeFileSync(configPath, lines.join('\n') + '\n');

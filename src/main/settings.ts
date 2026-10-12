@@ -10,6 +10,8 @@ const SettingsSchema = z.object({
   audio: z.boolean().default(true),
   startWithWindows: z.boolean().default(false),
   firstRunDone: z.boolean().default(false),
+  /** Encoder de video por hardware (si se cuelga, la app lo desactiva sola). */
+  hardwareEncoding: z.boolean().default(true),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 

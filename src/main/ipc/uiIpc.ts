@@ -5,6 +5,7 @@ import type { AppController } from '../appController';
 import { isPageUrl } from '../windows';
 
 export interface UiIpcExtras {
+  setHardwareEncoding(on: boolean): void;
   pickAndSendFile(): Promise<void>;
   sendFiles(paths: string[]): Promise<void>;
   cancelTransfer(id: string): void;
@@ -42,6 +43,7 @@ export function registerUiIpc(getWindow: () => BrowserWindow | null, app: AppCon
   handle('ui:endSession', null, () => app.endSession('USER'));
   handle('ui:setStartWithWindows', UiArgs.setStartWithWindows, (on) => app.setStartWithWindows(on));
   handle('ui:dismissFirstRun', null, () => app.dismissFirstRun());
+  handle('ui:setHardwareEncoding', UiArgs.setHardwareEncoding, (on) => extras.setHardwareEncoding(on));
   handle('ui:regeneratePairing', null, () => app.regeneratePairing());
   handle('ui:pickAndSendFile', null, () => extras.pickAndSendFile());
   handle('ui:sendFiles', UiArgs.sendFiles, (paths) => extras.sendFiles(paths));

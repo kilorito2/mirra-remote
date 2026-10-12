@@ -54,6 +54,12 @@ export class HostPeer {
       case 'control.send':
         this.sendControl(cmd.msg);
         break;
+      case 'fast.send': {
+        const ch = this.channels?.inputFast;
+        // Desordenado y sin retransmisión: si el buffer se llena, se descarta (la próxima posición la reemplaza).
+        if (ch?.readyState === 'open' && ch.bufferedAmount < 64 * 1024) ch.send(JSON.stringify(cmd.msg));
+        break;
+      }
     }
   }
 
@@ -110,7 +116,6 @@ export class HostPeer {
     const audio = pc.addTransceiver(stream.getAudioTracks()[0] ?? 'audio', { direction: 'sendonly', streams: [stream] });
     this.audioSender = audio.sender;
     stream.getAudioTracks().forEach((t) => (t.enabled = this.audioOn));
-
     this.channels = this.openChannels(pc);
     pc.onicecandidate = (e) => {
       const c = e.candidate;
@@ -123,7 +128,6 @@ export class HostPeer {
       this.api.event({ t: 'peer.state', state: pc.connectionState });
       if (pc.connectionState === 'connected') void this.reportCodec(pc);
     };
-
     await this.applyPreset();
     await this.negotiate(pc, false);
   }

@@ -30,7 +30,7 @@ export async function launchApp(opts: {
 }): Promise<LaunchedApp> {
   const userData = mkdtempSync(join(tmpdir(), 'kr-e2e-'));
   const app = await electron.launch({
-    args: [ROOT],
+    args: [...(process.env['KR_E2E_ARGS']?.split(' ').filter(Boolean) ?? []), ROOT],
     cwd: ROOT,
     env: {
       ...process.env,
@@ -40,6 +40,8 @@ export async function launchApp(opts: {
       KR_TEST_TEXTAREA: opts.textarea ? '1' : '0',
       KR_USER_DATA: userData,
       KR_PORT: String(opts.port),
+      // H.264 por software en los tests: determinista y no depende del driver de video (ver PROGRESS Fase 3).
+      KR_HW_ENCODE: process.env['KR_E2E_HW'] === '1' ? '1' : '0',
     },
   });
 

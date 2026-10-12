@@ -2,7 +2,7 @@
   "name": "kilorito-remote",
   "productName": "Kilorito Remote",
   "version": "0.1.0",
-  "description": "Controlá tu PC desde el celular por WiFi (WebRTC)",
+  "description": "Control\u00e1 tu PC desde el celular por WiFi (WebRTC)",
   "author": "kilorito",
   "license": "UNLICENSED",
   "private": true,
@@ -25,7 +25,8 @@
     "test:e2e": "npm run build && playwright test --config playwright.config.ts",
     "test:android": "npm run build && node scripts/android-run.mjs",
     "android:setup": "node scripts/android-setup.mjs",
-    "check": "npm run typecheck && npm run lint && npm test"
+    "check": "npm run typecheck && npm run lint && npm test",
+    "test:e2e:real": "npm run build && node scripts/run-real-e2e.mjs"
   },
   "dependencies": {
     "@jitsi/robotjs": "0.6.24",

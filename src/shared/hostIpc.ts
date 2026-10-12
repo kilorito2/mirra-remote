@@ -1,7 +1,7 @@
 /** Contrato IPC entre main y el renderer host (docs/PROTOCOL.md §4). */
 import { z } from 'zod';
 import { QUALITY_PRESET_NAMES, type QualityPreset } from './constants';
-import { ControlFromPhone, InputFastFromPhone, RtcCandidate, RtcSdp, type ClientSignal, type ControlFromPc } from './protocol';
+import { ControlFromPhone, InputFastFromPhone, RtcCandidate, RtcSdp, type ClientSignal, type ControlFromPc, type InputFastFromPc } from './protocol';
 
 export type HostCommand =
   | { t: 'session.start'; resume: boolean; displayId: string; preset: QualityPreset; audio: boolean }
@@ -9,7 +9,8 @@ export type HostCommand =
   | { t: 'display.set'; displayId: string }
   | { t: 'quality.set'; preset: QualityPreset }
   | { t: 'audio.set'; on: boolean }
-  | { t: 'control.send'; msg: ControlFromPc };
+  | { t: 'control.send'; msg: ControlFromPc }
+  | { t: 'fast.send'; msg: InputFastFromPc };
 
 /** Señales del celular que main reenvía al host. */
 export type SignalToHost = Extract<ClientSignal, { t: 'rtc.description' | 'rtc.candidate' | 'rtc.restart' }>;

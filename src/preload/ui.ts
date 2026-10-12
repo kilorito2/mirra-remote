@@ -16,6 +16,7 @@ const api: KrUiApi = {
   endSession: () => ipcRenderer.invoke('ui:endSession') as Promise<void>,
   setStartWithWindows: (on) => ipcRenderer.invoke('ui:setStartWithWindows', on) as Promise<void>,
   dismissFirstRun: () => ipcRenderer.invoke('ui:dismissFirstRun') as Promise<void>,
+  setHardwareEncoding: (on) => ipcRenderer.invoke('ui:setHardwareEncoding', on) as Promise<void>,
   regeneratePairing: () => ipcRenderer.invoke('ui:regeneratePairing') as Promise<void>,
   pickAndSendFile: () => ipcRenderer.invoke('ui:pickAndSendFile') as Promise<void>,
   sendFiles: (files) => ipcRenderer.invoke('ui:sendFiles', files.map((f) => webUtils.getPathForFile(f))) as Promise<void>,

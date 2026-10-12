@@ -35,7 +35,7 @@ export interface UiState {
   pairing: { url: string | null; qrDataUrl: string | null; tokenExpiresAt: number; pin: string; pinExpiresAt: number };
   session: SessionView;
   devices: PublicDeviceInfo[];
-  settings: { preset: QualityPreset; audio: boolean; startWithWindows: boolean };
+  settings: { preset: QualityPreset; audio: boolean; startWithWindows: boolean; hardwareEncoding: boolean };
   transfers: TransferView[];
   firstRun: boolean;
   caFingerprint: string;
@@ -48,6 +48,7 @@ export const UiArgs = {
   setAudio: z.boolean(),
   revokeDevice: DeviceId,
   setStartWithWindows: z.boolean(),
+  setHardwareEncoding: z.boolean(),
   sendFiles: z.array(z.string().min(1).max(4096)).min(1).max(20),
   cancelTransfer: z.string().min(1).max(64),
 } as const;
@@ -62,6 +63,8 @@ export interface KrUiApi {
   revokeDevice(id: string): Promise<void>;
   endSession(): Promise<void>;
   setStartWithWindows(on: boolean): Promise<void>;
+  /** Reinicia la app para aplicar el cambio. */
+  setHardwareEncoding(on: boolean): Promise<void>;
   dismissFirstRun(): Promise<void>;
   regeneratePairing(): Promise<void>;
   pickAndSendFile(): Promise<void>;

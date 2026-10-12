@@ -67,6 +67,7 @@ export default defineConfig(({ mode }) => {
             index: resolve('src/renderer/index.html'),
             host: resolve('src/renderer/host.html'),
             overlay: resolve('src/renderer/overlay.html'),
+            testpad: resolve('src/renderer/testpad.html'),
           },
         },
       },

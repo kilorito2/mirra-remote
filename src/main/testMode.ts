@@ -8,6 +8,8 @@ export interface TestMode {
   /** Carpeta de userData alternativa para aislar los E2E. */
   userDataDir: string | null;
   port: number | null;
+  /** null = usar el ajuste guardado. */
+  hardwareEncoding: boolean | null;
 }
 
 export const TEST_MODE_OFF: TestMode = {
@@ -17,6 +19,7 @@ export const TEST_MODE_OFF: TestMode = {
   textareaWindow: false,
   userDataDir: null,
   port: null,
+  hardwareEncoding: null,
 };
 
 /**
@@ -33,6 +36,7 @@ export function resolveTestMode(env: NodeJS.ProcessEnv, isPackaged: boolean): Te
       textareaWindow: env['KR_TEST_TEXTAREA'] === '1',
       userDataDir: env['KR_USER_DATA'] ?? null,
       port: Number.isInteger(port) && port > 0 && port < 65536 ? port : null,
+      hardwareEncoding: env['KR_HW_ENCODE'] === '0' ? false : env['KR_HW_ENCODE'] === '1' ? true : null,
     };
   }
   return TEST_MODE_OFF;

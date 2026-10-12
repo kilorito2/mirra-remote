@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { SessionEndReason } from '@shared/protocol';
 import { guessDeviceName } from './net/credentials';
 import { PinForm } from './screens/PinForm';
-import { SessionScreen } from './screens/SessionScreen';
+import { SessionView } from './screens/SessionView';
 import { StatusScreen } from './screens/StatusScreen';
 import { defaultFactory, useRemote, type ClientFactory } from './useRemote';
 
@@ -34,17 +34,7 @@ export function App({ token, createClient = defaultFactory }: { token: string | 
   const transient = phase.kind === 'offline' || phase.kind === 'connecting' || phase.kind === 'authenticating';
   const peerAlive = peerState === 'connected' || peerState === 'disconnected' || peerState === 'connecting';
   if (phase.kind === 'ready' || (transient && peerAlive && stream)) {
-    return (
-      <SessionScreen stream={stream} reconnecting={transient || peerState === 'disconnected'}>
-        <button
-          type="button"
-          onClick={() => client.end()}
-          className="absolute top-3 right-3 min-h-11 rounded-pill bg-selva/80 px-4 font-semibold text-pluma backdrop-blur"
-        >
-          Salir
-        </button>
-      </SessionScreen>
-    );
+    return <SessionView remote={remote} reconnecting={transient || peerState === 'disconnected'} />;
   }
 
   return <main className="flex h-full items-center justify-center px-6 py-8">{render()}</main>;

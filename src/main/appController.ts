@@ -114,7 +114,7 @@ export class AppController {
       },
       session: this.session.status,
       devices: this.devices.list(),
-      settings: { preset: s.preset, audio: s.audio, startWithWindows: s.startWithWindows },
+      settings: { preset: s.preset, audio: s.audio, startWithWindows: s.startWithWindows, hardwareEncoding: s.hardwareEncoding },
       transfers: [],
       firstRun: !s.firstRunDone,
       caFingerprint: this.cert?.caFingerprint ?? '',

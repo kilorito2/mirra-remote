@@ -1,0 +1,27 @@
+/* Ventana de prueba (solo REMOTE_TEST_MODE): el textarea recibe el teclado real y la barra animada
+   mantiene cambiando la pantalla, así la captura entrega frames aunque el escritorio esté quieto. */
+body {
+  margin: 12px;
+  font: 16px system-ui, sans-serif;
+}
+
+textarea {
+  width: 100%;
+  font-size: 18px;
+}
+
+.pulse {
+  height: 24px;
+  margin-top: 12px;
+  background: linear-gradient(90deg, #f2b33d, #24504b);
+  animation: slide 0.8s linear infinite alternate;
+}
+
+@keyframes slide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(240px);
+  }
+}
