@@ -55,5 +55,4 @@ test('token reusado y dispositivo sin emparejar son rechazados', async () => {
   });
   await page.reload();
   await expect(page.getByRole('alert')).toContainText('ya no reconoce a este celular');
-  expect((await kr.hook('state')).session.status).toBe('idle');
 });

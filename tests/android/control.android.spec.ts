@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { baseUrl, launchApp, type LaunchedApp } from '../support/app';
+import { clickToolbar } from '../support/toolbar';
 import { Touch } from '../support/touch';
 import { expectVideoFlowing } from '../support/video';
 import { ANDROID_PORT, openViaIntent, resetChrome, screencap } from './device';
@@ -44,11 +45,6 @@ async function phonePoint(page: Page, nx: number, ny: number): Promise<{ x: numb
   );
 }
 
-async function toolbar(page: Page, name: string | RegExp) {
-  const reveal = page.getByRole('button', { name: 'Mostrar controles' });
-  if (await reveal.isVisible()) await reveal.click();
-  return page.getByRole('navigation', { name: 'Controles' }).getByRole('button', { name });
-}
 
 test('trackpad: arrastrar mueve el cursor real de la PC', async () => {
   const { page, touch } = await session();
@@ -68,7 +64,8 @@ test('trackpad: arrastrar mueve el cursor real de la PC', async () => {
 
 test('táctil directo: el cursor real llega a donde se tocó', async () => {
   const { page, touch } = await session();
-  await (await toolbar(page, /Modo trackpad/)).click();
+  await clickToolbar(page, /Modo trackpad/);
+  await expect(page.getByRole('button', { name: /Modo táctil directo/ })).toBeAttached();
   const target = await kr.hook('testpadTextareaRect');
   const nx = target.x + target.width / 2;
   const ny = target.y + target.height / 2;

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { InjectedAction } from '../../src/shared/testHooks';
 import { baseUrl, launchApp, type LaunchedApp } from '../support/app';
+import { clickToolbar } from '../support/toolbar';
 import { Touch } from '../support/touch';
 import { expectVideoFlowing } from '../support/video';
 
@@ -28,12 +29,6 @@ async function connect(page: Page): Promise<{ touch: Touch; box: { x: number; y:
 
 const injected = () => kr.hook('injected');
 
-/** La barra se esconde a los 4 s: si está escondida, se la muestra con el tirador. */
-async function toolbarButton(page: Page, name: string | RegExp) {
-  const reveal = page.getByRole('button', { name: 'Mostrar controles' });
-  if (await reveal.isVisible()) await reveal.click();
-  return page.getByRole('navigation', { name: 'Controles' }).getByRole('button', { name });
-}
 const buttons = (actions: InjectedAction[]) =>
   actions.filter((a): a is Extract<InjectedAction, { type: 'button' }> => a.type === 'button').map((a) => `${a.button}:${a.action}`);
 
@@ -91,7 +86,7 @@ test('mantener y arrastrar = arrastre con el botón apretado, y se suelta al fin
 
 test('táctil directo: el clic cae donde se toca', async ({ page }) => {
   const { touch, box } = await connect(page);
-  await (await toolbarButton(page, /Modo trackpad/)).click();
+  await clickToolbar(page, /Modo trackpad/);
   await kr.hook('clearInjected');
   // Centro de la superficie = centro del frame (el video está centrado con letterbox).
   await touch.tap(box.width / 2, box.height / 2);
@@ -104,7 +99,7 @@ test('táctil directo: el clic cae donde se toca', async ({ page }) => {
 
 test('teclado: texto con ñ, tildes, @ y €, y backspace', async ({ page }) => {
   await connect(page);
-  await (await toolbarButton(page, 'Teclado')).click();
+  await clickToolbar(page, 'Teclado');
   const input = page.getByTestId('keyboard-input');
   await expect(input).toBeFocused();
   await input.pressSequentially('ñandú @ €');
@@ -117,7 +112,7 @@ test('teclado: texto con ñ, tildes, @ y €, y backspace', async ({ page }) => 
 
 test('teclas especiales: combo y modificador pegado + letra del teclado', async ({ page }) => {
   await connect(page);
-  await (await toolbarButton(page, 'Teclas especiales')).click();
+  await clickToolbar(page, 'Teclas especiales');
   await page.getByRole('button', { name: 'Alt+Tab' }).click();
   await page.getByRole('button', { name: 'Ctrl', exact: true }).click();
   await page.getByRole('button', { name: 'Esc' }).click();

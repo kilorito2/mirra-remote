@@ -61,3 +61,31 @@ no tiene. Hallazgos corregidos con tests: (1) el timeout de 15 s sin autenticar 
 
 **Tests**: 153 unit · 22 E2E desktop (4 de video en Chromium; WebKit sin WebRTC) · 4 Android (video H.264 1366×768,
 `framesDecoded` sube, screencap revisado: se ve la pantalla de la PC y el borde rojo no aparece en la captura).
+
+## Fase 3 — Control ✅ (2026-10-12)
+**Hecho**
+- Puerto `InputInjector` + `RobotJsInjector` (SendInput absoluto en el escritorio virtual, texto unicode por unidad UTF-16
+  para que los emoji salgan bien) + `FakeInjector`.
+- `InputController`: clamp al display elegido, rate limit 500/s (ráfaga 100), `seq` con wrap de 32 bits, registro de
+  teclas/botones y `releaseAll` ante heartbeat ausente 3 s, `input.reset`, canal cerrado, fin de sesión o caída del host.
+- `shared/coords.ts`: normalizado ⇄ físico con rect de `dipToScreenRect` (tests 100/125/150 % y 2 monitores con distinto DPI).
+- Celular: reconocedor de gestos puro (trackpad con aceleración, tap/doble tap, 2 dedos = clic derecho/scroll, mantener y
+  arrastrar, directo, pellizco = zoom local con paneo que sigue al cursor), `SurfaceController`, teclado oculto con diff
+  de texto (keyCode 229), barra de teclas especiales con modificadores fijos, Win+L con aviso, Ctrl+Alt+Supr explicado,
+  barra flotante que se esconde. `cursor.pos` de la PC al celular a ≤ 30 Hz.
+
+**Tests**: 203 unit · 31 E2E desktop (9 de control con FakeInjector) · 1 E2E con injector real sin emulador
+(`npm run test:e2e:real`: clic real en el textarea y "Ñandú @ café") · 9 Android con robotjs real (cursor, directo,
+dos dedos, Ctrl liberado al cortar) + teclado del celular.
+
+**Problemas de entorno encontrados (y cómo quedaron)**
+- Tras usar el emulador con `-gpu auto`, el encoder H.264 por hardware de Chromium se colgaba (`addTransceiver` no volvía) y
+  Chrome del emulador se caía al crear el contexto GL; finalmente la PC se colgó (Kernel-Power 41). Tras reiniciar, el
+  encoder por hardware volvió a andar.
+  - App: ajuste "Codificación por hardware" (activado) + watchdog de 10 s sin oferta ⇒ se desactiva y la app se reinicia sola.
+  - Tests: H.264 por software por defecto (`KR_E2E_HW=1` usa hardware).
+  - Emulador: `-gpu swiftshader_indirect -feature -Vulkan` (SwiftShader Vulkan también lo tiraba); locks viejos se limpian;
+    `KR_WIPE=1` borra los datos del AVD si queda trabado.
+- La captura de Windows solo entrega frames si la pantalla cambia: los tests abren una ventana animada (testpad).
+- Teclado con injector real dentro del emulador fallaba por foco de ventanas de Windows (emulador encima); el camino de
+  inyección real se prueba sin emulador y el teclado del celular en Android con FakeInjector.

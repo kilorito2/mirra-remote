@@ -1,5 +1,6 @@
 import { expect, test, type Browser } from '@playwright/test';
 import { baseUrl, launchApp, type LaunchedApp } from '../support/app';
+import { clickToolbar } from '../support/toolbar';
 import { expectVideoFlowing } from '../support/video';
 import { ANDROID_PORT, openViaIntent, resetChrome } from './device';
 
@@ -24,9 +25,7 @@ test('teclado del celular: ñ, tildes y @ llegan a la PC', async () => {
   browser = opened.browser;
   const { page } = opened;
   await expectVideoFlowing(page, () => kr.hook('startActivity'));
-  const reveal = page.getByRole('button', { name: 'Mostrar controles' });
-  if (await reveal.isVisible()) await reveal.click();
-  await page.getByRole('navigation', { name: 'Controles' }).getByRole('button', { name: 'Teclado' }).click();
+  await clickToolbar(page, 'Teclado');
   const input = page.getByTestId('keyboard-input');
   await expect(input).toBeFocused();
   await input.pressSequentially('Ñandú @ café', { delay: 60 });

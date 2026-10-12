@@ -26,13 +26,13 @@ Verificación estándar de cada tarea: `npm run typecheck && npm run lint && npm
 - [x] Checkpoint F2
 
 ## Fase 3 — Control
-- [ ] 3.1 Puertos + FakeInjector + RobotJsInjector + InputController (clamp, rate limit, watchdog 3 s, releaseAll, seq).
-- [ ] 3.2 `shared/coords.ts` (normalizado ⇄ físico; 100/125/150 %, 2 monitores) + rect físico en main.
-- [ ] 3.3 Reconocedor de gestos puro + aceleración (trackpad, directo, scroll, drag, tap 2 dedos, pinch).
-- [ ] 3.4 Superficie de video: zoom/paneo local, sigue al cursor, `touch-action:none`, envío por canales.
-- [ ] 3.5 Teclado (input oculto, diff de texto) + barra de teclas especiales/combos (sticky, Win+L aviso, Ctrl+Alt+Supr deshabilitado).
-- [ ] 3.6 E2E desktop gestos → FakeInjector; Android con robotjs: posición, multitouch CDP, textarea con ñ/tildes/@, releaseAll al cortar.
-- [ ] Checkpoint F3
+- [x] 3.1 Puertos + FakeInjector + RobotJsInjector + InputController (clamp, rate limit, watchdog 3 s, releaseAll, seq).
+- [x] 3.2 `shared/coords.ts` (normalizado ⇄ físico; 100/125/150 %, 2 monitores) + rect físico en main.
+- [x] 3.3 Reconocedor de gestos puro + aceleración (trackpad, directo, scroll, drag, tap 2 dedos, pinch).
+- [x] 3.4 Superficie de video: zoom/paneo local, sigue al cursor, `touch-action:none`, envío por canales.
+- [x] 3.5 Teclado (input oculto, diff de texto) + barra de teclas especiales/combos (sticky, Win+L aviso, Ctrl+Alt+Supr deshabilitado).
+- [x] 3.6 E2E desktop gestos → FakeInjector; Android con robotjs: posición, multitouch CDP, textarea con ñ/tildes/@, releaseAll al cortar.
+- [x] Checkpoint F3
 
 ## Fase 4 — Extras
 - [ ] 4.1 Audio loopback + botón activar en celular.

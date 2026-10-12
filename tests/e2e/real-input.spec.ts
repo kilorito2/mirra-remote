@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { baseUrl, launchApp, type LaunchedApp } from '../support/app';
+import { clickToolbar } from '../support/toolbar';
 import { Touch } from '../support/touch';
 import { expectVideoFlowing } from '../support/video';
 
@@ -36,17 +37,15 @@ async function phonePoint(page: Page, nx: number, ny: number): Promise<{ x: numb
 test('clic real en el textarea de la PC y texto con ñ, tildes y @', async ({ page }) => {
   await page.goto(`${baseUrl(PORT)}/#t=${await kr.hook('token')}`);
   await expectVideoFlowing(page, () => kr.hook('startActivity'));
-  const reveal = page.getByRole('button', { name: 'Mostrar controles' });
-  if (await reveal.isVisible()) await reveal.click();
-  await page.getByRole('navigation', { name: 'Controles' }).getByRole('button', { name: /Modo trackpad/ }).click();
+  await clickToolbar(page, /Modo trackpad/);
+  await expect(page.getByRole('button', { name: /Modo táctil directo/ })).toBeAttached();
 
   const target = await kr.hook('testpadTextareaRect');
   const p = await phonePoint(page, target.x + target.width / 2, target.y + target.height / 2);
   await (await Touch.on(page)).tap(p.x, p.y);
   await expect.poll(() => kr.hook('testpadFocused'), { timeout: 5_000 }).toBe(true);
 
-  if (await reveal.isVisible()) await reveal.click();
-  await page.getByRole('navigation', { name: 'Controles' }).getByRole('button', { name: 'Teclado' }).click();
+  await clickToolbar(page, 'Teclado');
   const input = page.getByTestId('keyboard-input');
   await input.pressSequentially('Ñandú @ café', { delay: 40 });
   await expect.poll(() => kr.hook('testpadText'), { timeout: 10_000 }).toBe('Ñandú @ café');

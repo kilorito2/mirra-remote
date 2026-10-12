@@ -32,3 +32,8 @@ Play Store (sin root). El WebKit de Playwright en Windows **no trae WebRTC**.
 3. `adb forward tcp:9333 localabstract:chrome_devtools_remote` + `chromium.connectOverCDP()` y se toma la pestaña de ese origen.
 Sigue siendo Playwright sobre el Chrome real del emulador; CDP da además `Input.dispatchTouchEvent` para el multitouch.
 También se activa `hide_error_dialogs` porque el emulador recién arrancado muestra "System UI isn't responding".
+
+## Actualización Fase 3
+- Emulador con render por software (`-gpu swiftshader_indirect -feature -Vulkan`): con el GPU de la PC se degradaba el driver.
+- Teclado: la inyección real se verifica con `npm run test:e2e:real` (sin emulador); en Android se verifica el teclado del
+  celular con FakeInjector. El resto del control usa robotjs real.

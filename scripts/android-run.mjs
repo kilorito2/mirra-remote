@@ -1,7 +1,7 @@
 // Suite E2E con el emulador Android: arranca el AVD remote-test si hace falta, prepara adb reverse
 // y corre Playwright `_android`. Ver ADR-0006.
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, openSync } from 'node:fs';
+import { existsSync, mkdirSync, openSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { androidEnv, AVD_NAME } from './android-env.mjs';
 
@@ -26,15 +26,22 @@ console.warn('   No toques el mouse ni el teclado hasta que termine. Ctrl+C para
 await sleep(5000);
 
 const running = adb('devices').stdout.split('\n').some((l) => /^emulator-\d+\s+device/.test(l));
+if (!running && /^emulator-\d+\s+offline/m.test(adb('devices').stdout)) {
+  console.error('Hay un emulador trabado (offline). Cerralo (taskkill /F /IM qemu-system-x86_64.exe) y volvé a correr; si sigue, usá KR_WIPE=1.');
+  process.exit(1);
+}
 let emulator = null;
 if (!running) {
+  // Un cuelgue o reinicio deja locks viejos y el emulador cree que ya hay otra instancia.
+  const avdDir = join(env.avdHome, `${AVD_NAME}.avd`);
+  for (const f of readdirSync(avdDir)) if (f.endsWith('.lock')) rmSync(join(avdDir, f), { recursive: true, force: true });
   console.info(`Arrancando el emulador ${AVD_NAME}…`);
   const artifacts = join(import.meta.dirname, '..', 'tests', 'android', 'artifacts');
   mkdirSync(artifacts, { recursive: true });
   const logFd = openSync(join(artifacts, 'emulator.log'), 'w');
   // Render por software: con el GPU de la PC, Chrome del emulador se caía al crear el contexto GL
   // y el driver quedaba degradado; con Vulkan por software (SwiftShader) el emulador se caía (ver PROGRESS Fase 3).
-  emulator = spawn(env.emulator, ['-avd', AVD_NAME, '-no-snapshot-save', '-no-boot-anim', '-gpu', 'swiftshader_indirect', '-feature', '-Vulkan', '-netdelay', 'none', '-netspeed', 'full'], {
+  emulator = spawn(env.emulator, ['-avd', AVD_NAME, ...(process.env.KR_WIPE === '1' ? ['-wipe-data'] : []), '-no-snapshot-save', '-no-boot-anim', '-gpu', 'swiftshader_indirect', '-feature', '-Vulkan', '-netdelay', 'none', '-netspeed', 'full'], {
     env: env.processEnv,
     stdio: ['ignore', logFd, logFd],
     detached: false,
