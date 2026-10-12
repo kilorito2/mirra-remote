@@ -36,4 +36,10 @@ export interface KrTestHooks {
   testpadTextareaRect(): Promise<Rect>;
   /** true solo si la ventana de prueba tiene el foco (antes de tipear con el injector real). */
   testpadFocused(): boolean;
+  clipboardRead(): Promise<string>;
+  clipboardWrite(text: string): Promise<void>;
+  /** Manda un archivo de la PC al celular como el botón "Enviar al celular". */
+  sendFileToPhone(path: string): void;
+  /** Archivos recibidos del celular (en test mode van a userData/downloads). */
+  receivedFiles(): { name: string; size: number }[];
 }

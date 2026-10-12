@@ -1,7 +1,7 @@
 /** Contrato IPC entre main y el renderer host (docs/PROTOCOL.md §4). */
 import { z } from 'zod';
 import { QUALITY_PRESET_NAMES, type QualityPreset } from './constants';
-import { ControlFromPhone, InputFastFromPhone, RtcCandidate, RtcSdp, type ClientSignal, type ControlFromPc, type InputFastFromPc } from './protocol';
+import { ControlFromPhone, InputFastFromPhone, RtcCandidate, RtcSdp, type ClientSignal, type ControlFromPc, type FileMessage, type InputFastFromPc } from './protocol';
 
 export type HostCommand =
   | { t: 'session.start'; resume: boolean; displayId: string; preset: QualityPreset; audio: boolean }
@@ -10,7 +10,9 @@ export type HostCommand =
   | { t: 'quality.set'; preset: QualityPreset }
   | { t: 'audio.set'; on: boolean }
   | { t: 'control.send'; msg: ControlFromPc }
-  | { t: 'fast.send'; msg: InputFastFromPc };
+  | { t: 'fast.send'; msg: InputFastFromPc }
+  | { t: 'file.msg'; msg: FileMessage }
+  | { t: 'file.chunk'; data: Uint8Array };
 
 /** Señales del celular que main reenvía al host. */
 export type SignalToHost = Extract<ClientSignal, { t: 'rtc.description' | 'rtc.candidate' | 'rtc.restart' }>;
@@ -37,6 +39,9 @@ export type HostEvent = z.infer<typeof HostEvent>;
 export const HostInput = z.union([InputFastFromPhone, ControlFromPhone]);
 export type HostInput = z.infer<typeof HostInput>;
 
+/** Lo que el host reenvía del canal `file`. Main valida el mensaje con FileMessage y el tamaño del chunk. */
+export type HostFileIn = { kind: 'msg'; msg: unknown } | { kind: 'chunk'; data: Uint8Array };
+
 export const HostPreset = z.enum(QUALITY_PRESET_NAMES);
 
 /** API que el preload del host expone como `window.krHost`. */
@@ -46,6 +51,8 @@ export interface KrHostApi {
   sendSignal(msg: HostSignal): void;
   event(evt: HostEvent): void;
   input(msg: HostInput): void;
+  /** Canal `file` del celular: mensajes JSON (sin validar acá, main los valida) o bytes. */
+  fileIn(evt: HostFileIn): void;
   /** Avisa que el host cargó y escucha comandos. */
   ready(): void;
 }

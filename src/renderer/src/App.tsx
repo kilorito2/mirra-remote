@@ -4,6 +4,7 @@ import type { KrUiApi } from '@shared/uiState';
 import { PRESET_HINT, PRESET_LABEL } from './format';
 import { useNow, useUiState } from './hooks';
 import { DeviceList } from './components/DeviceList';
+import { Transfers } from './components/Transfers';
 import { PairingPanel } from './components/PairingPanel';
 import { FirstRunNotice, SessionHeader } from './components/SessionHeader';
 import { Section, Segmented, Toggle } from './components/controls';
@@ -36,6 +37,16 @@ export function App({ api }: { api: KrUiApi }) {
       <Section title="Transmisión">
         <Segmented label="Calidad" value={state.settings.preset} options={presetOptions} onChange={(p) => void api.setPreset(p)} />
         <Toggle label="Audio de la PC" hint="El celular arranca en silencio" checked={state.settings.audio} onChange={(on) => void api.setAudio(on)} />
+      </Section>
+
+      <Section title="Archivos">
+        <Transfers
+          active={active}
+          transfers={state.transfers}
+          onPick={() => void api.pickAndSendFile()}
+          onDrop={(files) => void api.sendFiles(files)}
+          onCancel={(id) => void api.cancelTransfer(id)}
+        />
       </Section>
 
       <Section title="Dispositivos emparejados">

@@ -35,13 +35,13 @@ Verificación estándar de cada tarea: `npm run typecheck && npm run lint && npm
 - [x] Checkpoint F3
 
 ## Fase 4 — Extras
-- [ ] 4.1 Audio loopback + botón activar en celular.
-- [ ] 4.2 Portapapeles bidireccional.
-- [ ] 4.3 Archivos celular→PC (stream a Descargas/Kilorito Remote, sanitizado, ack/backpressure, cancelar).
-- [ ] 4.4 Archivos PC→celular (botón + drag&drop, Blob, progreso, cancelar).
-- [ ] 4.5 Multi-monitor (`replaceTrack`), stats overlay, Wake Lock, fullscreen, PWA manifest.
-- [ ] 4.6 Android: portapapeles ambos sentidos, archivo, wifi off/on reconecta.
-- [ ] Checkpoint F4
+- [x] 4.1 Audio loopback + botón activar en celular.
+- [x] 4.2 Portapapeles bidireccional.
+- [x] 4.3 Archivos celular→PC (stream a Descargas/Kilorito Remote, sanitizado, ack/backpressure, cancelar).
+- [x] 4.4 Archivos PC→celular (botón + drag&drop, Blob, progreso, cancelar).
+- [x] 4.5 Multi-monitor (`replaceTrack`), stats overlay, Wake Lock, fullscreen, PWA manifest.
+- [x] 4.6 Android: portapapeles ambos sentidos, archivo, wifi off/on reconecta.
+- [x] Checkpoint F4
 
 ## Fase 5 — Hardening y release
 - [ ] 5.1 Bounty hunt (pairing + protocolo) y fixes con tests.

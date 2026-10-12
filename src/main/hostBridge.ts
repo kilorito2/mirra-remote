@@ -1,7 +1,8 @@
 import { BrowserWindow, ipcMain, type IpcMainEvent, type WebContents } from 'electron';
 import type { QualityPreset } from '@shared/constants';
 import { HostEvent, HostInput, HostSignal, type HostCommand, type PeerState, type SignalToHost } from '@shared/hostIpc';
-import type { ControlFromPc, InputFastFromPc } from '@shared/protocol';
+import { FILE_CHUNK_BYTES } from '@shared/constants';
+import { FileMessage, type ControlFromPc, type InputFastFromPc } from '@shared/protocol';
 import type { ScreenSource } from './ports/ScreenSource';
 import type { HostBridge } from './session/sessionManager';
 import { hardenWebContents, isPageUrl, loadPage, securePreferences } from './windows';
@@ -13,6 +14,8 @@ export interface HostBridgeDeps {
   toPeer: (msg: HostSignal) => void;
   onPeerState: (state: PeerState) => void;
   onInput: (msg: HostInput) => void;
+  onFileMessage: (msg: FileMessage) => void;
+  onFileChunk: (data: Uint8Array) => void;
   onChannel: (label: 'input-fast' | 'control' | 'file', open: boolean) => void;
   /** El renderer host murió o se cerró: hay que soltar el input y cortar. */
   onHostGone: () => void;
@@ -56,6 +59,16 @@ export class ElectronHostBridge implements HostBridge {
         deps.onChannel(evt.data.label, evt.data.open);
       } else if (evt.data.t === 'error') {
         console.error('[kr] host:', evt.data.code, evt.data.detail);
+      }
+    });
+    ipcMain.on('host:file', (e, raw: unknown) => {
+      if (!this.fromHost(e) || typeof raw !== 'object' || raw === null) return;
+      const evt = raw as { kind?: unknown; msg?: unknown; data?: unknown };
+      if (evt.kind === 'msg') {
+        const msg = FileMessage.safeParse(evt.msg);
+        if (msg.success) deps.onFileMessage(msg.data);
+      } else if (evt.kind === 'chunk' && evt.data instanceof Uint8Array && evt.data.byteLength <= FILE_CHUNK_BYTES) {
+        deps.onFileChunk(evt.data);
       }
     });
     ipcMain.on('host:input', (e, raw: unknown) => {
@@ -122,6 +135,14 @@ export class ElectronHostBridge implements HostBridge {
 
   sendControl(msg: ControlFromPc): void {
     this.send({ t: 'control.send', msg });
+  }
+
+  sendFileMessage(msg: FileMessage): void {
+    this.send({ t: 'file.msg', msg });
+  }
+
+  sendFileChunk(data: Uint8Array): void {
+    this.send({ t: 'file.chunk', data });
   }
 
   sendFast(msg: InputFastFromPc): void {

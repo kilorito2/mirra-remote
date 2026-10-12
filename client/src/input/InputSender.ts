@@ -1,4 +1,4 @@
-import { HEARTBEAT_INTERVAL_MS, SCROLL_MAX } from '@shared/constants';
+import { CLIPBOARD_MAX, HEARTBEAT_INTERVAL_MS, SCROLL_MAX, type QualityPreset } from '@shared/constants';
 import type { Pt } from './surface';
 import type { ControlFromPhone, InputFastFromPhone, KeyName, MouseButton } from '@shared/protocol';
 
@@ -83,6 +83,22 @@ export class InputSender {
 
   backspaces(n: number): void {
     for (let i = 0; i < n; i++) this.key('backspace');
+  }
+
+  clipboardPush(text: string): void {
+    this.transport.sendControl({ t: 'clipboard.push', text: text.slice(0, CLIPBOARD_MAX) });
+  }
+
+  clipboardPull(): void {
+    this.transport.sendControl({ t: 'clipboard.pull' });
+  }
+
+  selectDisplay(displayId: string): void {
+    this.transport.sendControl({ t: 'display.select', displayId });
+  }
+
+  setQuality(preset: QualityPreset): void {
+    this.transport.sendControl({ t: 'quality.set', preset });
   }
 
   /** El celular perdió el foco o el gesto se canceló: la PC suelta todo. */

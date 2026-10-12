@@ -89,3 +89,22 @@ dos dedos, Ctrl liberado al cortar) + teclado del celular.
 - La captura de Windows solo entrega frames si la pantalla cambia: los tests abren una ventana animada (testpad).
 - Teclado con injector real dentro del emulador fallaba por foco de ventanas de Windows (emulador encima); el camino de
   inyección real se prueba sin emulador y el teclado del celular en Android con FakeInjector.
+
+## Fase 4 — Extras ✅ (2026-10-12)
+**Hecho**
+- Audio Opus del loopback (m-line fija); el celular arranca muteado y se activa con el botón dentro del toque (iOS).
+- Portapapeles de texto en ambos sentidos (`clipboard` de Electron, async en v44; `navigator.clipboard` con alternativa
+  manual si el navegador no deja leer/escribir).
+- Archivos celular → PC: canal `file`, chunks de 16 KiB, `bufferedAmountLowThreshold`, ventana de 8 MiB con ack cada MiB,
+  escritura en stream a `.part` (`wx`, nunca pisa), nombre saneado (rutas, reservados de Windows, controles, bidi),
+  tamaño exacto o se descarta. Destino: `Descargas/Kilorito Remote`.
+- Archivos PC → celular: botón "Enviar al celular" y soltar sobre la ventana; lectura en bloques de 256 KiB con pausa por
+  ventana de acks; el celular arma un Blob (máx. 512 MiB) y lo descarga. Progreso y cancelar en las dos puntas.
+- Celular: hoja "Más" (pantalla, calidad, estadísticas, pantalla completa + orientación horizontal), overlay de stats
+  (RTT, fps, bitrate, pérdida, resolución, codec), Wake Lock (se vuelve a pedir al volver de segundo plano).
+
+**Tests**: 231 unit · 37 E2E desktop (portapapeles, archivos en ambos sentidos, stats, audio, corte de red) ·
+12 Android (portapapeles, archivo, corte de WiFi del emulador con reconexión, más lo de fases anteriores).
+
+**Sin cobertura automática**: multi-monitor (esta PC tiene una sola pantalla): el cambio con `replaceTrack` y el borde que
+se mueve quedan en el checklist manual.

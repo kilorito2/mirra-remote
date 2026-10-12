@@ -1,6 +1,7 @@
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { app, BrowserWindow, dialog, globalShortcut, screen, type MessageBoxOptions, type Rectangle as Rect } from 'electron';
-import { SESSION_HOTKEY } from '@shared/constants';
+import { app, BrowserWindow, clipboard, dialog, globalShortcut, screen, type MessageBoxOptions, type Rectangle as Rect } from 'electron';
+import { CLIPBOARD_MAX, DOWNLOADS_SUBDIR, SESSION_HOTKEY } from '@shared/constants';
 import type { KrTestHooks } from '@shared/testHooks';
 import { ElectronScreenSource, electronDisplay } from './adapters/ElectronScreenSource';
 import { FakeInjector } from './adapters/FakeInjector';
@@ -9,6 +10,8 @@ import { AppController } from './appController';
 import type { AskUser } from './auth/approval';
 import { createSafeStorageCipher } from './auth/electronCipher';
 import { installCaptureHandler } from './capture';
+import { FileReceiver } from './files/fileReceiver';
+import { FileSender } from './files/fileSender';
 import { ElectronHostBridge } from './hostBridge';
 import { SessionIndicators } from './indicators';
 import { registerUiIpc } from './ipc/uiIpc';
@@ -33,6 +36,8 @@ let controller: AppController | null = null;
 let host: ElectronHostBridge | null = null;
 let link: PhoneLink | null = null;
 let injector: InputInjector | null = null;
+let receiver: FileReceiver | null = null;
+let sender: FileSender | null = null;
 let quitting = false;
 
 if (!app.requestSingleInstanceLock()) {
@@ -131,9 +136,13 @@ function onPhoneCommand(cmd: PhoneCommand): void {
       controller.endSession('USER');
       break;
     case 'clipboard.push':
-    case 'clipboard.pull':
-      // Fase 4.
+      void clipboard.writeText(cmd.text);
       break;
+    case 'clipboard.pull': {
+      const h = host;
+      void clipboard.readText().then((text) => h.sendControl({ t: 'clipboard.data', text: text.slice(0, CLIPBOARD_MAX) }));
+      break;
+    }
   }
 }
 
@@ -150,8 +159,18 @@ async function boot(): Promise<void> {
       if (state === 'failed' || state === 'closed') controller?.session.hostDisconnected();
     },
     onInput: (msg) => link?.handle(msg),
+    // Los mensajes del canal `file` son de la transferencia entrante o de la saliente (cada una mira su id).
+    onFileMessage: (msg) => {
+      receiver?.message(msg);
+      sender?.message(msg);
+    },
+    onFileChunk: (data) => receiver?.chunk(data),
     onChannel: (label, open) => {
       link?.channelChanged(label, open);
+      if (label === 'file' && !open) {
+        receiver?.reset();
+        sender?.reset();
+      }
       if (label === 'control' && open) sendStateToPhone();
     },
     onHostGone: () => {
@@ -180,6 +199,15 @@ async function boot(): Promise<void> {
     onCommand: onPhoneCommand,
   });
   const linkRef = link;
+  const downloads = () => (testMode.enabled ? join(app.getPath('userData'), 'downloads') : join(app.getPath('downloads'), DOWNLOADS_SUBDIR));
+  receiver = new FileReceiver({ dir: downloads, send: (m) => hostRef.sendFileMessage(m), onProgress: (t) => controller?.updateTransfer(t) });
+  sender = new FileSender({
+    send: (m) => hostRef.sendFileMessage(m),
+    sendChunk: (d) => hostRef.sendFileChunk(d),
+    onProgress: (t) => controller?.updateTransfer(t),
+  });
+  const receiverRef = receiver;
+  const senderRef = sender;
 
   configurePermissions((wc) => hostRef.isHostContents(wc));
   installCaptureHandler(
@@ -220,6 +248,8 @@ async function boot(): Promise<void> {
         } else {
           // Primero soltar el input; después apagar indicadores.
           void linkRef.sessionEnded();
+          receiverRef.reset();
+          senderRef.reset();
           indicators?.sessionEnded();
         }
       },
@@ -240,9 +270,19 @@ async function boot(): Promise<void> {
       app.relaunch();
       app.exit(0);
     },
-    pickAndSendFile: () => Promise.resolve(),
-    sendFiles: () => Promise.resolve(),
-    cancelTransfer: () => undefined,
+    pickAndSendFile: async () => {
+      if (controllerRef.session.status.status !== 'active' || !mainWindow) return;
+      const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { title: 'Enviar al celular', properties: ['openFile', 'multiSelections'] });
+      if (!canceled) filePaths.forEach((p) => senderRef.enqueue(p));
+    },
+    sendFiles: (paths) => {
+      if (controllerRef.session.status.status === 'active') paths.forEach((p) => senderRef.enqueue(p));
+      return Promise.resolve();
+    },
+    cancelTransfer: (id) => {
+      senderRef.cancel(id);
+      receiverRef.cancel(id);
+    },
   });
 
   // Corte inmediato desde cualquier lugar de Windows.
@@ -311,6 +351,16 @@ function exposeTestHooks(): void {
       const physical = screen.dipToScreenRect(win, { x: content.x + r.x, y: content.y + r.y, width: r.width, height: r.height });
       const a = activeRect();
       return { x: (physical.x - a.x) / a.width, y: (physical.y - a.y) / a.height, width: physical.width / a.width, height: physical.height / a.height };
+    },
+    clipboardRead: () => clipboard.readText(),
+    clipboardWrite: (text) => clipboard.writeText(text),
+    sendFileToPhone: (path) => {
+      sender?.enqueue(path);
+    },
+    receivedFiles: () => {
+      const dir = join(app.getPath('userData'), 'downloads');
+      if (!existsSync(dir)) return [];
+      return readdirSync(dir).map((name) => ({ name, size: statSync(join(dir, name)).size }));
     },
     testpadFocused: () => !!testpad && !testpad.isDestroyed() && testpad.isFocused(),
     testpadText: async () => {

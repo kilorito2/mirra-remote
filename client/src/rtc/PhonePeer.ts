@@ -9,6 +9,7 @@ export interface PhonePeerEvents {
   onInputFastMessage?(data: string): void;
   onFileMessage?(data: string | ArrayBuffer): void;
   onChannelOpen?(label: 'input-fast' | 'control' | 'file'): void;
+  onChannelClose?(label: 'input-fast' | 'control' | 'file'): void;
 }
 
 /** Cuánto se tolera `disconnected` antes de pedir ICE restart (cambio de WiFi, celular bloqueado). */
@@ -116,6 +117,7 @@ export class PhonePeer {
       const ch = pc.createDataChannel(label, { ...init, negotiated: true, id });
       ch.binaryType = 'arraybuffer';
       ch.onopen = () => this.events.onChannelOpen?.(label);
+      ch.onclose = () => this.events.onChannelClose?.(label);
       this.channels[label] = ch;
       return ch;
     };

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ControlFromPc, ControlFromPhone, InputFastFromPc, parseJson } from '@shared/protocol';
 import { SignalingClient, type Phase, type SignalingOptions } from './net/signaling';
+import { PhoneFiles, downloadBlob, type PhoneTransfer } from './files/PhoneFiles';
 import { PhonePeer } from './rtc/PhonePeer';
 import { summarizeStats, type StatsSummary } from './rtc/stats';
 
@@ -18,6 +19,10 @@ export interface Remote {
   peer: PhonePeer;
   /** Posición real del cursor de la PC (normalizada al display transmitido). */
   onCursor: (cb: (pos: CursorPos) => void) => () => void;
+  files: PhoneFiles;
+  transfers: PhoneTransfer[];
+  /** Texto que llegó del portapapeles de la PC (tras "Traer de la PC"). */
+  pcClipboard: { text: string; at: number } | null;
 }
 
 export type CursorPos = Extract<InputFastFromPc, { t: 'cursor.pos' }>;
@@ -35,12 +40,19 @@ export function useRemote(token: string | null, deviceName: string, createClient
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [peerState, setPeerState] = useState<RTCPeerConnectionState | 'none'>('none');
   const [pcState, setPcState] = useState<PcState | null>(null);
+  const [transfers, setTransfers] = useState<PhoneTransfer[]>([]);
+  const [pcClipboard, setPcClipboard] = useState<{ text: string; at: number } | null>(null);
 
-  const [{ client, peer, onCursor }] = useState(() => {
+  const [{ client, peer, onCursor, files }] = useState(() => {
     const cursorListeners = new Set<(pos: CursorPos) => void>();
     // El peer se crea antes que el cliente pero usa su `send`: se enlazan por esta referencia.
     const link: { client: SignalingClient | null } = { client: null };
+    const fileLink: { files: PhoneFiles | null } = { files: null };
     const p = new PhonePeer((msg) => link.client?.send(msg), {
+      onFileMessage: (data) => fileLink.files?.receive(data),
+      onChannelClose: (label) => {
+        if (label === 'file') fileLink.files?.reset();
+      },
       onStream: setStream,
       onState: setPeerState,
       onInputFastMessage: (data) => {
@@ -50,6 +62,7 @@ export function useRemote(token: string | null, deviceName: string, createClient
       onControlMessage: (data) => {
         const msg = parseJson(ControlFromPc, data);
         if (msg?.t === 'state') setPcState(msg);
+        else if (msg?.t === 'clipboard.data') setPcClipboard({ text: msg.text, at: Date.now() });
       },
     });
     const c = createClient({
@@ -69,13 +82,15 @@ export function useRemote(token: string | null, deviceName: string, createClient
       hasLivePeer: () => p.isAlive(),
     });
     link.client = c;
+    const f = new PhoneFiles({ channel: () => p.channel('file'), onChange: setTransfers, save: downloadBlob });
+    fileLink.files = f;
     const subscribe = (cb: (pos: CursorPos) => void) => {
       cursorListeners.add(cb);
       return () => {
         cursorListeners.delete(cb);
       };
     };
-    return { client: c, peer: p, onCursor: subscribe };
+    return { client: c, peer: p, onCursor: subscribe, files: f };
   });
 
   useEffect(() => {
@@ -109,5 +124,5 @@ export function useRemote(token: string | null, deviceName: string, createClient
     };
   }, [client, peer]);
 
-  return { phase, stream, peerState, pcState, client, peer, onCursor };
+  return { phase, stream, peerState, pcState, client, peer, onCursor, files, transfers, pcClipboard };
 }

@@ -15,6 +15,7 @@ const api: KrHostApi = {
   sendSignal: (msg) => ipcRenderer.send('host:signal', msg),
   event: (evt) => ipcRenderer.send('host:event', evt),
   input: (msg) => ipcRenderer.send('host:input', msg),
+  fileIn: (evt) => ipcRenderer.send('host:file', evt),
   ready: () => ipcRenderer.send('host:ready'),
 };
 

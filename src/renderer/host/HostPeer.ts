@@ -1,4 +1,4 @@
-import { CHANNELS, type QualityPreset } from '@shared/constants';
+import { CHANNELS, FILE_BUFFER_HIGH_BYTES, FILE_BUFFER_LOW_BYTES, FILE_CHUNK_BYTES, type QualityPreset } from '@shared/constants';
 import type { HostCommand, KrHostApi, SignalToHost } from '@shared/hostIpc';
 import { orderVideoCodecs, planEncoding } from '@shared/media';
 import { ControlFromPhone, InputFastFromPhone, parseJson, type ControlFromPc } from '@shared/protocol';
@@ -29,6 +29,7 @@ export class HostPeer {
   private preset: QualityPreset = 'sharp';
   private audioOn = true;
   private generation = 0;
+  private fileQueue: (string | ArrayBuffer)[] = [];
 
   constructor(private readonly api: KrHostApi) {}
 
@@ -53,6 +54,15 @@ export class HostPeer {
         break;
       case 'control.send':
         this.sendControl(cmd.msg);
+        break;
+      case 'file.msg':
+        this.queueFile(JSON.stringify(cmd.msg));
+        break;
+      case 'file.chunk':
+        // Main lee en bloques de 256 KiB; el canal manda de a 16 KiB (R24).
+        for (let i = 0; i < cmd.data.byteLength; i += FILE_CHUNK_BYTES) {
+          this.queueFile(cmd.data.slice(i, i + FILE_CHUNK_BYTES).buffer);
+        }
         break;
       case 'fast.send': {
         const ch = this.channels?.inputFast;
@@ -178,7 +188,39 @@ export class HostPeer {
       const msg = parseJson(ControlFromPhone, e.data);
       if (msg) this.api.input(msg);
     };
+    file.binaryType = 'arraybuffer';
+    file.bufferedAmountLowThreshold = FILE_BUFFER_LOW_BYTES;
+    file.onbufferedamountlow = () => this.flushFile();
+    file.onmessage = (e: MessageEvent<unknown>) => {
+      if (typeof e.data === 'string') {
+        let msg: unknown;
+        try {
+          msg = JSON.parse(e.data);
+        } catch {
+          return;
+        }
+        this.api.fileIn({ kind: 'msg', msg });
+      } else if (e.data instanceof ArrayBuffer) {
+        this.api.fileIn({ kind: 'chunk', data: new Uint8Array(e.data) });
+      }
+    };
     return { inputFast, control, file };
+  }
+
+  /** Mismo orden que se encola (oferta, bytes, fin), sin pasar de 4 MiB en el buffer del canal. */
+  private queueFile(data: string | ArrayBuffer): void {
+    this.fileQueue.push(data);
+    this.flushFile();
+  }
+
+  private flushFile(): void {
+    const ch = this.channels?.file;
+    if (ch?.readyState !== 'open') return;
+    while (this.fileQueue.length && ch.bufferedAmount < FILE_BUFFER_HIGH_BYTES) {
+      const next = this.fileQueue.shift();
+      if (typeof next === 'string') ch.send(next);
+      else if (next) ch.send(next);
+    }
   }
 
   private async applyPreset(): Promise<void> {
@@ -241,6 +283,7 @@ export class HostPeer {
     this.pc?.close();
     this.pc = null;
     this.channels = null;
+    this.fileQueue = [];
     this.videoSender = null;
     this.audioSender = null;
     this.pendingCandidates = [];

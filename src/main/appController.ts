@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import QRCode from 'qrcode';
 import type { QualityPreset } from '@shared/constants';
 import type { SessionEndReason } from '@shared/protocol';
-import type { LocalIp, UiState } from '@shared/uiState';
+import type { LocalIp, TransferView, UiState } from '@shared/uiState';
 import { ApprovalGate, type AskUser } from './auth/approval';
 import { DeviceStore, type SecretCipher } from './auth/deviceStore';
 import { PairingTokens } from './auth/pairingToken';
@@ -50,6 +50,8 @@ export class AppController {
   private serverError: string | null = null;
   private timers: NodeJS.Timeout[] = [];
   private lastPairingKey = '';
+  private readonly transfers = new Map<string, TransferView>();
+  private lastTransferBroadcast = 0;
 
   constructor(private readonly deps: AppControllerDeps) {
     this.settings = new SettingsStore(join(deps.userData, 'settings.json'));
@@ -115,10 +117,28 @@ export class AppController {
       session: this.session.status,
       devices: this.devices.list(),
       settings: { preset: s.preset, audio: s.audio, startWithWindows: s.startWithWindows, hardwareEncoding: s.hardwareEncoding },
-      transfers: [],
+      transfers: [...this.transfers.values()],
       firstRun: !s.firstRunDone,
       caFingerprint: this.cert?.caFingerprint ?? '',
     };
+  }
+
+  /** Progreso de transferencias para la UI: se guardan las últimas 8. */
+  updateTransfer(t: TransferView): void {
+    const prev = this.transfers.get(t.id);
+    this.transfers.delete(t.id);
+    this.transfers.set(t.id, t);
+    while (this.transfers.size > 8) {
+      const oldest = this.transfers.keys().next().value;
+      if (oldest === undefined) break;
+      this.transfers.delete(oldest);
+    }
+    // Un aviso cada 150 ms alcanza para la barra; los cambios de estado salen enseguida.
+    const now = Date.now();
+    if (prev?.state !== t.state || now - this.lastTransferBroadcast > 150) {
+      this.lastTransferBroadcast = now;
+      this.broadcast();
+    }
   }
 
   broadcast(): void {

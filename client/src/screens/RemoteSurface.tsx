@@ -11,13 +11,15 @@ interface Props {
   onCursor: (cb: (pos: CursorPos) => void) => () => void;
   /** Cualquier toque en la superficie (para esconder la barra). */
   onActivity?: () => void;
+  /** El elemento <video>, para activar el audio dentro del gesto del usuario (iOS lo exige). */
+  onVideo?: (el: HTMLVideoElement | null) => void;
 }
 
 /**
  * Superficie táctil sobre el video (R18). El navegador no hace zoom, scroll ni pull-to-refresh
  * (`touch-action: none`, `overscroll-behavior: none`); el zoom es local, con CSS transform.
  */
-export function RemoteSurface({ stream, mode, sender, onCursor, onActivity }: Props) {
+export function RemoteSurface({ stream, mode, sender, onCursor, onActivity, onVideo }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -33,7 +35,8 @@ export function RemoteSurface({ stream, mode, sender, onCursor, onActivity }: Pr
     if (!video) return;
     video.srcObject = stream;
     if (stream) void video.play().catch(() => undefined);
-  }, [stream]);
+    onVideo?.(video);
+  }, [stream, onVideo]);
 
   useEffect(() => {
     const root = rootRef.current;
