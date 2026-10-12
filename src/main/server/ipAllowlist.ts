@@ -30,6 +30,21 @@ export function normalizeIp(raw: string | undefined): NormalizedIp | null {
   return null;
 }
 
+/**
+ * Clave para límites por origen: IPv4 completa; IPv6 por /64 (una máquina puede inventarse
+ * infinitas direcciones dentro de su /64 o de fe80::/10 y esquivar un límite por IP exacta).
+ */
+export function rateKey(raw: string): string {
+  const ip = normalizeIp(raw);
+  if (!ip) return raw;
+  if (ip.family === 'ipv4') return ip.address;
+  const [head = '', tail = ''] = ip.address.split('::');
+  const left = head ? head.split(':') : [];
+  const right = tail ? tail.split(':') : [];
+  const groups = ip.address.includes('::') ? [...left, ...Array<string>(8 - left.length - right.length).fill('0'), ...right] : left;
+  return `${groups.slice(0, 4).map((g) => g.padStart(4, '0')).join(':')}::/64`;
+}
+
 export function isLoopback(ip: NormalizedIp): boolean {
   return loopbackRanges.check(ip.address, ip.family);
 }

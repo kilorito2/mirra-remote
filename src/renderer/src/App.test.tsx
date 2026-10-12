@@ -14,6 +14,7 @@ function baseState(): UiState {
     transfers: [],
     firstRun: false,
     caFingerprint: 'AA:BB',
+    hotkeyOk: true,
   };
 }
 

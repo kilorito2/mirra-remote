@@ -23,6 +23,11 @@ export function App({ api }: { api: KrUiApi }) {
     <main className="mx-auto max-w-md">
       <SessionHeader session={state.session} now={now} onEnd={() => void api.endSession()} />
       {state.firstRun && <FirstRunNotice onDismiss={() => void api.dismissFirstRun()} />}
+      {!state.hotkeyOk && (
+        <p role="alert" className="mx-6 mb-4 rounded-xl border border-alerta p-3 text-sm">
+          Otro programa ya usa Ctrl+Alt+Shift+K, así que el corte rápido no funciona. Para cortar usá el botón o el menú de la bandeja.
+        </p>
+      )}
 
       {!active && (
         <PairingPanel
@@ -78,7 +83,10 @@ export function App({ api }: { api: KrUiApi }) {
               </p>
               <p>iPhone: Ajustes, General, VPN y gestión de dispositivos, instalar; después Información, Confianza de certificados, activarlo.</p>
               <p>Android: Ajustes, Seguridad, Más ajustes, Instalar certificados, Certificado de CA.</p>
-              <p className="break-all">Huella para comparar: {state.caFingerprint}</p>
+              <p className="break-all">
+                Antes de confiar en el certificado, compará su huella SHA-256 con esta (el celular la muestra al instalarlo). Si no coincide, no lo
+                instales: alguien en la red está interceptando. {state.caFingerprint}
+              </p>
             </div>
           )}
         </div>

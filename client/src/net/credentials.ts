@@ -1,33 +1,3 @@
-import { z } from 'zod';
-import { DeviceId, DeviceSecret } from '@shared/protocol';
-
-const KEY = 'kr.credentials.v1';
-const Credentials = z.strictObject({ deviceId: DeviceId, deviceSecret: DeviceSecret });
-export type Credentials = z.infer<typeof Credentials>;
-
-/**
- * Credenciales del dispositivo. Van en localStorage (pedido explícito del diseño): el secreto nunca
- * se manda de nuevo, solo se usa para firmar el challenge. localStorage es por origen (IP:puerto).
- */
-export function loadCredentials(storage: Storage = localStorage): Credentials | null {
-  try {
-    const raw = storage.getItem(KEY);
-    if (!raw) return null;
-    const parsed = Credentials.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : null;
-  } catch {
-    return null;
-  }
-}
-
-export function saveCredentials(creds: Credentials, storage: Storage = localStorage): void {
-  storage.setItem(KEY, JSON.stringify(creds));
-}
-
-export function clearCredentials(storage: Storage = localStorage): void {
-  storage.removeItem(KEY);
-}
-
 /** Lee el token del fragment (#t=…) y lo borra de la URL y del historial. */
 export function takeTokenFromLocation(loc: Location = location, hist: History = history): string | null {
   const match = /(?:^#|&)t=([A-Za-z0-9_-]{43})(?:&|$)/.exec(loc.hash);

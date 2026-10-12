@@ -133,6 +133,23 @@ describe('InputController', () => {
     expect(injector.actions).toEqual([{ type: 'scroll', dx: 0, dy: 120 }]);
   });
 
+  it('Ctrl+Alt+Supr con teclas sueltas tampoco se manda', async () => {
+    const { ctl, injector } = setup();
+    current = ctl;
+    await ctl.handle({ t: 'key', key: 'ctrl', action: 'down' });
+    await ctl.handle({ t: 'key', key: 'alt', action: 'down' });
+    await ctl.handle({ t: 'key', key: 'delete', action: 'down' });
+    expect(injector.actions.some((a) => a.type === 'key' && a.key === 'delete')).toBe(false);
+  });
+
+  it('lo encolado antes de stop() no se inyecta después', async () => {
+    const { ctl, injector } = setup();
+    const pending = ctl.handle({ t: 'text', text: 'tarde' });
+    await ctl.stop();
+    await pending;
+    expect(injector.actions.some((a) => a.type === 'text')).toBe(false);
+  });
+
   it('comandos que no son input se ignoran', async () => {
     const { ctl, injector } = setup();
     current = ctl;

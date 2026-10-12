@@ -43,6 +43,10 @@ export class SessionIndicators {
     }
   }
 
+  notify(body: string): void {
+    if (Notification.isSupported()) new Notification({ title: 'Kilorito Remote', body, icon: resourcePath('icon.png') }).show();
+  }
+
   /** Mueve el borde al monitor que se está transmitiendo. */
   displayChanged(display: Display): void {
     if (this.live) this.showOverlay(display);

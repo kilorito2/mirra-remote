@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, statSync, statfsSync } from 'node:fs';
 import { join } from 'node:path';
 import { app, BrowserWindow, clipboard, dialog, globalShortcut, screen, type MessageBoxOptions, type Rectangle as Rect } from 'electron';
 import { CLIPBOARD_MAX, DOWNLOADS_SUBDIR, SESSION_HOTKEY } from '@shared/constants';
@@ -10,7 +10,7 @@ import { AppController } from './appController';
 import type { AskUser } from './auth/approval';
 import { createSafeStorageCipher } from './auth/electronCipher';
 import { installCaptureHandler } from './capture';
-import { FileReceiver } from './files/fileReceiver';
+import { FileReceiver, cleanupPartials } from './files/fileReceiver';
 import { FileSender } from './files/fileSender';
 import { ElectronHostBridge } from './hostBridge';
 import { SessionIndicators } from './indicators';
@@ -39,6 +39,7 @@ let injector: InputInjector | null = null;
 let receiver: FileReceiver | null = null;
 let sender: FileSender | null = null;
 let quitting = false;
+let sessionIp: string | null = null;
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -82,7 +83,7 @@ function buildMainWindow(): BrowserWindow {
   return win;
 }
 
-const askUser: AskUser = async ({ deviceName, ip }, signal) => {
+const askUser: AskUser = async ({ deviceName, ip, method }, signal) => {
   showMainWindow();
   const options: MessageBoxOptions = {
     type: 'question',
@@ -92,7 +93,7 @@ const askUser: AskUser = async ({ deviceName, ip }, signal) => {
     noLink: true,
     title: 'Kilorito Remote',
     message: `¿Permitir que ${deviceName} controle esta PC?`,
-    detail: `Conexión desde ${ip}. Va a ver la pantalla y usar el mouse y el teclado. Podés cortar en cualquier momento con Ctrl+Alt+Shift+K.`,
+    detail: `Pedido con ${method === 'qr' ? 'el código QR' : 'el PIN'} desde ${ip}. Si no lo pediste vos, rechazalo. Va a ver la pantalla y usar el mouse y el teclado. Podés cortar en cualquier momento con Ctrl+Alt+Shift+K.`,
     signal,
   };
   const { response } = mainWindow ? await dialog.showMessageBox(mainWindow, options) : await dialog.showMessageBox(options);
@@ -200,7 +201,16 @@ async function boot(): Promise<void> {
   });
   const linkRef = link;
   const downloads = () => (testMode.enabled ? join(app.getPath('userData'), 'downloads') : join(app.getPath('downloads'), DOWNLOADS_SUBDIR));
-  receiver = new FileReceiver({ dir: downloads, send: (m) => hostRef.sendFileMessage(m), onProgress: (t) => controller?.updateTransfer(t) });
+  cleanupPartials(downloads());
+  receiver = new FileReceiver({
+    dir: downloads,
+    send: (m) => hostRef.sendFileMessage(m),
+    onProgress: (t) => controller?.updateTransfer(t),
+    freeBytes: (dir) => {
+      const st = statfsSync(dir);
+      return st.bavail * st.bsize;
+    },
+  });
   sender = new FileSender({
     send: (m) => hostRef.sendFileMessage(m),
     sendChunk: (d) => hostRef.sendFileChunk(d),
@@ -244,9 +254,14 @@ async function boot(): Promise<void> {
           if (!indicators?.isLive) {
             linkRef.sessionStarted();
             indicators?.sessionStarted(status.deviceName, electronDisplay(hostRef.activeDisplayId));
+          } else if (sessionIp && sessionIp !== status.ip) {
+            // El mismo dispositivo reapareció desde otra IP: puede ser un cambio de red o alguien con sus credenciales.
+            indicators.notify(`${status.deviceName} se reconectó desde ${status.ip}. Si no fuiste vos, cortá con Ctrl+Alt+Shift+K y revocalo.`);
           }
+          sessionIp = status.ip;
         } else {
           // Primero soltar el input; después apagar indicadores.
+          sessionIp = null;
           void linkRef.sessionEnded();
           receiverRef.reset();
           senderRef.reset();
@@ -288,11 +303,13 @@ async function boot(): Promise<void> {
   // Corte inmediato desde cualquier lugar de Windows.
   if (!globalShortcut.register(SESSION_HOTKEY, () => controller?.endSession('HOTKEY'))) {
     console.warn('No se pudo registrar el atajo', SESSION_HOTKEY);
+    controller.hotkeyOk = false;
   }
 
   mainWindow = buildMainWindow();
   await controller.start();
-  exposeTestHooks();
+  // ADR-0008: en producción la constante es false y el bundler elimina los hooks enteros.
+  if (__KR_ALLOW_TEST_MODE__) exposeTestHooks();
 }
 
 declare global {

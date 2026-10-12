@@ -108,3 +108,18 @@ dos dedos, Ctrl liberado al cortar) + teclado del celular.
 
 **Sin cobertura automática**: multi-monitor (esta PC tiene una sola pantalla): el cambio con `replaceTrack` y el borde que
 se mueve quedan en el checklist manual.
+
+## Fase 5 — Hardening y release ✅ (2026-10-12)
+**Hecho**
+- Auditoría adversarial (agente `agent-skills:security-auditor` en modo bounty hunter, en lugar de `ecc:security-bounty-hunter`):
+  2 altos, 3 medios, 8 bajos; todos corregidos o mitigados con tests (ver SECURITY.md). ADR-0009 (clave no exportable).
+- Instalador NSIS (`npm run dist` → `release/Kilorito Remote Setup 0.1.0.exe`): robotjs en `asarUnpack` sin rebuild,
+  Electron fuses, verificación de que el build no tiene modo test (los hooks de test también se eliminan en compilación),
+  renderer minificado. Smoke test del ejecutable: arranca, sirve por LAN, rechaza loopback, RunAsNode bloqueado.
+- README y docs/TESTING-MANUAL.md (checklist del checkpoint final).
+- `npm audit --omit=dev`: 0 vulnerabilidades. Dev: 8 moderadas en `sprintf-js` (cadena de herramientas de build; no van en el instalador).
+
+**Tests finales**: 241 unit · 37 E2E desktop (+1 con injector real) · 12 Android.
+
+**Encontrado al final**: el test de teclado en Android sumaba textos ignorando backspaces; Chrome Android reemplaza la palabra
+en composición (backspace + palabra). Ahora el test reproduce lo que vería la PC.

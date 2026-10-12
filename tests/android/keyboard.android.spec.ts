@@ -1,4 +1,5 @@
 import { expect, test, type Browser } from '@playwright/test';
+import type { InjectedAction } from '../../src/shared/testHooks';
 import { baseUrl, launchApp, type LaunchedApp } from '../support/app';
 import { clickToolbar } from '../support/toolbar';
 import { expectVideoFlowing } from '../support/video';
@@ -30,8 +31,15 @@ test('teclado del celular: ñ, tildes y @ llegan a la PC', async () => {
   await expect(input).toBeFocused();
   await input.pressSequentially('Ñandú @ café', { delay: 60 });
   await input.press('Backspace');
-  await expect
-    .poll(async () => (await kr.hook('injected')).filter((a) => a.type === 'text').map((a) => a.text).join(''), { timeout: 15_000 })
-    .toBe('Ñandú @ café');
-  await expect.poll(async () => (await kr.hook('injected')).some((a) => a.type === 'key' && a.key === 'backspace')).toBe(true);
+  // Lo que vería la PC: texto y backspaces aplicados en orden (el teclado reemplaza la palabra en composición).
+  await expect.poll(async () => replay(await kr.hook('injected')), { timeout: 15_000 }).toBe('Ñandú @ caf');
 });
+
+function replay(actions: InjectedAction[]): string {
+  let text: string[] = [];
+  for (const a of actions) {
+    if (a.type === 'text') text = [...text, ...Array.from(a.text)];
+    else if (a.type === 'key' && a.key === 'backspace' && a.action === 'down') text = text.slice(0, -1);
+  }
+  return text.join('');
+}

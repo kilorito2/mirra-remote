@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyInterface, isAllowedRemote, normalizeIp } from './ipAllowlist';
+import { classifyInterface, isAllowedRemote, normalizeIp, rateKey } from './ipAllowlist';
 
 const strict = { allowLoopback: false };
 const testMode = { allowLoopback: true };
@@ -55,6 +55,16 @@ describe('normalizeIp', () => {
   it('desarma IPv4-mapped y quita la zona', () => {
     expect(normalizeIp('::FFFF:10.0.0.2')).toEqual({ address: '10.0.0.2', family: 'ipv4' });
     expect(normalizeIp('FE80::1%eth0')).toEqual({ address: 'fe80::1', family: 'ipv6' });
+  });
+});
+
+describe('rateKey', () => {
+  it('IPv4 exacta; IPv6 agrupada por /64 (no se esquiva inventando direcciones)', () => {
+    expect(rateKey('192.168.0.5')).toBe('192.168.0.5');
+    expect(rateKey('::ffff:192.168.0.5')).toBe('192.168.0.5');
+    expect(rateKey('fe80::1')).toBe(rateKey('fe80::dead:beef:1234:5678%12'));
+    expect(rateKey('fd7a:115c:a1e0:ab12:4843:cd96:6257:c9e5')).toBe('fd7a:115c:a1e0:ab12::/64');
+    expect(rateKey('fd7a:115c:a1e0:ab13::1')).not.toBe(rateKey('fd7a:115c:a1e0:ab12::1'));
   });
 });
 

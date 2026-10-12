@@ -95,6 +95,8 @@ export class InputController {
   }
 
   private async apply(msg: HostInput): Promise<void> {
+    // Lo encolado antes de un stop() no se inyecta después.
+    if (!this.active && msg.t !== 'input.reset') return;
     const inj = this.deps.injector;
     switch (msg.t) {
       case 'pointer.move':
@@ -160,6 +162,8 @@ export class InputController {
 
   private async keyDown(k: KeyName): Promise<void> {
     if (this.keys.has(k)) return;
+    // Ctrl+Alt+Supr armado con teclas sueltas tampoco se manda (la SAS requiere el servicio nativo).
+    if ((k === 'delete' || k === 'end') && this.keys.has('ctrl') && this.keys.has('alt')) return;
     this.keys.add(k);
     await this.deps.injector.key(k, 'down');
   }

@@ -39,6 +39,8 @@ export interface UiState {
   transfers: TransferView[];
   firstRun: boolean;
   caFingerprint: string;
+  /** false si otro programa ya usa Ctrl+Alt+Shift+K: el corte rápido no funciona. */
+  hotkeyOk: boolean;
 }
 
 /** Argumentos que llegan del renderer UI: se validan en main aunque el renderer sea nuestro. */

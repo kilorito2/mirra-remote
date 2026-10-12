@@ -14,6 +14,11 @@ export const PIN_MAX_ATTEMPTS_PER_IP = 5;
 export const PIN_LOCKOUT_MS = 300_000;
 /** Fallos totales (todas las IPs) sobre un mismo PIN antes de invalidarlo: frena la rotación de IPs. */
 export const PIN_MAX_TOTAL_FAILURES = 10;
+/** Intentos de PIN por minuto entre todos los orígenes: con 10⁶ combinaciones, adivinar lleva semanas. */
+export const PIN_GLOBAL_ATTEMPTS_PER_MIN = 20;
+export const MAX_UNAUTH_PER_ORIGIN = 4;
+/** Una conexión que no manda nada en este tiempo se cierra (no ocupa lugar). */
+export const FIRST_MESSAGE_TIMEOUT_MS = 5_000;
 export const APPROVAL_TIMEOUT_MS = 60_000;
 export const NONCE_TTL_MS = 30_000;
 export const UNAUTH_TIMEOUT_MS = 15_000;

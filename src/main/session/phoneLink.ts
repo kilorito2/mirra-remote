@@ -3,6 +3,7 @@ import { physicalToNormalized, type Rect } from '@shared/coords';
 import type { HostInput } from '@shared/hostIpc';
 import type { ControlFromPc, InputFastFromPc } from '@shared/protocol';
 import type { InputInjector } from '../ports/InputInjector';
+import { TokenBucket } from '@shared/tokenBucket';
 import { InputController } from './InputController';
 
 const INPUT_TYPES = new Set<HostInput['t']>([
@@ -39,6 +40,7 @@ export class PhoneLink {
   readonly input: InputController;
   private cursorTimer: NodeJS.Timeout | null = null;
   private lastCursor = '';
+  private readonly commands = new TokenBucket(10, 20);
 
   constructor(private readonly deps: PhoneLinkDeps) {
     this.input = new InputController({
@@ -59,7 +61,8 @@ export class PhoneLink {
 
   handle(msg: HostInput): void {
     if (isInputMessage(msg)) void this.input.handle(msg);
-    else this.deps.onCommand(msg);
+    // Los comandos (calidad, pantalla, portapapeles) escriben ajustes o recapturan: límite propio.
+    else if (this.commands.tryTake()) this.deps.onCommand(msg);
   }
 
   channelChanged(label: 'input-fast' | 'control' | 'file', open: boolean): void {

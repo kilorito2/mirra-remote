@@ -1,0 +1,39 @@
+appId: com.kilorito.remote
+productName: Kilorito Remote
+copyright: Kilorito Remote
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**
+  - dist-client/**
+  - resources/**
+  - package.json
+  - '!**/*.map'
+# ADR-0002: robotjs es N-API con prebuild win32-x64; no se recompila (no hacen falta Build Tools).
+npmRebuild: false
+nodeGypRebuild: false
+# Un proceso local no puede usar el binario firmado como Node ni abrirle el inspector, y el asar no se puede
+# modificar sin que la app lo detecte (auditoría Fase 5, B7).
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  enableCookieEncryption: true
+asarUnpack:
+  - node_modules/@jitsi/robotjs/**
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.png
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Kilorito Remote
+  deleteAppDataOnUninstall: false

@@ -45,7 +45,7 @@ WS upgrade: `Origin` debe ser exactamente `https://<Host>`; `maxPayload` 64 KiB;
 | `t` | Campos | Notas |
 |---|---|---|
 | `pair.pending` | — | esperando aprobación en la PC |
-| `pair.approved` | `deviceId, deviceSecret` | **única** vez que viaja el secreto |
+| `pair.approved` | `deviceId, deviceSecret` | **única** vez que viaja el secreto; el celular lo guarda como CryptoKey no exportable (ADR-0009) |
 | `auth.challenge` | `nonce` | un uso, vence a 30 s |
 | `auth.ok` | `deviceId, hostName` | autenticado |
 | `rtc.description` | `description: {type:'offer', sdp}` | la PC es siempre la ofertante (también en ICE restart) |
@@ -59,7 +59,7 @@ WS upgrade: `Origin` debe ser exactamente `https://<Host>`; `maxPayload` 64 KiB;
 |---|---|---|
 | `BAD_MESSAGE` | no pasa el schema | tras 3 |
 | `TOKEN_INVALID` | token inexistente, usado o vencido | sí |
-| `PIN_INVALID` | PIN incorrecto o vencido | no (hasta bloqueo) |
+| `PIN_INVALID` | PIN incorrecto o vencido | sí |
 | `PIN_LOCKED` | 5 fallos desde esta IP; `retryAfterMs` | sí |
 | `REJECTED` | el usuario rechazó o venció el diálogo | sí |
 | `APPROVAL_BUSY` | ya hay otro diálogo de aprobación abierto | sí |

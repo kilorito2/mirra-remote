@@ -1,7 +1,7 @@
-import { computeAuthHmac } from '@shared/authHmac';
+import { signAuthNonce } from '@shared/authHmac';
 import { PROTOCOL_VERSION, WS_PATH } from '@shared/constants';
 import { ServerSignal, parseJson, type ClientSignal, type ErrorCode, type SessionEndReason } from '@shared/protocol';
-import { clearCredentials, loadCredentials, saveCredentials, type Credentials } from './credentials';
+import { browserCredentialStore, type CredentialStore, type Credentials } from './credentialStore';
 
 export type Phase =
   | { kind: 'connecting' }
@@ -31,7 +31,7 @@ export interface SignalingOptions {
   onRtc?: (msg: RtcFromPc) => void;
   /** true si todavía hay un RTCPeerConnection vivo (para `session.join{resume}`). */
   hasLivePeer?: () => boolean;
-  storage?: Storage;
+  credentials?: CredentialStore;
   createSocket?: (url: string) => WebSocket;
 }
 
@@ -45,7 +45,9 @@ export class SignalingClient {
   private ws: WebSocket | null = null;
   private token: string | null;
   private pendingPin: string | null = null;
-  private creds: Credentials | null;
+  private creds: Credentials | null = null;
+  private readonly store: CredentialStore;
+  private loaded: Promise<void> | null = null;
   private attempt = 0;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private stopped = false;
@@ -56,7 +58,7 @@ export class SignalingClient {
   constructor(private readonly opts: SignalingOptions) {
     this.token = opts.token;
     this.deviceName = opts.deviceName;
-    this.creds = loadCredentials(opts.storage);
+    this.store = opts.credentials ?? browserCredentialStore();
     this.url = opts.url ?? `wss://${location.host}${WS_PATH}`;
   }
 
@@ -76,7 +78,16 @@ export class SignalingClient {
     this.ws = ws;
     ws.onopen = () => {
       this.attempt = 0;
-      this.begin();
+      // Las credenciales se leen de IndexedDB (async) una sola vez.
+      this.loaded ??= this.store.load().then(
+        (c) => {
+          this.creds = c;
+        },
+        () => undefined,
+      );
+      void this.loaded.then(() => {
+        if (this.ws === ws) this.begin();
+      });
     };
     ws.onmessage = (ev: MessageEvent) => {
       if (typeof ev.data !== 'string') return;
@@ -151,13 +162,13 @@ export class SignalingClient {
         this.setPhase({ kind: 'pendingApproval' });
         break;
       case 'pair.approved':
-        this.creds = { deviceId: msg.deviceId, deviceSecret: msg.deviceSecret };
-        saveCredentials(this.creds, this.opts.storage);
+        // El secreto se convierte en una clave no exportable y no se guarda en claro.
+        this.creds = await this.store.save(msg.deviceId, msg.deviceSecret);
         break;
       case 'auth.challenge': {
         const creds = this.creds;
         if (!creds) return;
-        this.send({ t: 'auth.response', deviceId: creds.deviceId, hmac: await computeAuthHmac(creds.deviceSecret, msg.nonce) });
+        this.send({ t: 'auth.response', deviceId: creds.deviceId, hmac: await signAuthNonce(creds.key, msg.nonce) });
         break;
       }
       case 'auth.ok':
@@ -181,6 +192,8 @@ export class SignalingClient {
   private onError(code: ErrorCode, retryAfterMs: number | undefined): void {
     switch (code) {
       case 'PIN_INVALID':
+        // La PC cierra el socket: no se reconecta solo, el próximo PIN abre uno nuevo.
+        this.stopped = true;
         this.setPhase({ kind: 'needPairing', reason: { code } });
         return;
       case 'PIN_LOCKED':
@@ -195,7 +208,7 @@ export class SignalingClient {
         if (!this.creds) this.setPhase({ kind: 'needPairing', reason: { code } });
         return;
       case 'AUTH_FAILED':
-        clearCredentials(this.opts.storage);
+        void this.store.clear();
         this.creds = null;
         this.stopped = true;
         this.setPhase({ kind: 'needPairing', reason: { code: 'FORGOTTEN' } });

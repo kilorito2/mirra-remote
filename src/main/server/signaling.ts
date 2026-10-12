@@ -2,7 +2,7 @@ import type { IncomingMessage, Server } from 'node:http';
 import { isIP } from 'node:net';
 import type { Duplex } from 'node:stream';
 import { WebSocketServer, type RawData, type WebSocket } from 'ws';
-import { MAX_BAD_MESSAGES, UNAUTH_TIMEOUT_MS, WS_MAX_PAYLOAD, WS_PATH } from '@shared/constants';
+import { FIRST_MESSAGE_TIMEOUT_MS, MAX_BAD_MESSAGES, MAX_UNAUTH_PER_ORIGIN, UNAUTH_TIMEOUT_MS, WS_MAX_PAYLOAD, WS_PATH } from '@shared/constants';
 import { ClientSignal, parseJson, type ErrorCode, type ServerSignal, type SessionEndReason } from '@shared/protocol';
 import { TokenBucket } from '@shared/tokenBucket';
 import type { ApprovalGate } from '../auth/approval';
@@ -10,7 +10,7 @@ import { Challenge } from '../auth/challenge';
 import type { DeviceStore } from '../auth/deviceStore';
 import type { PairingTokens } from '../auth/pairingToken';
 import type { PinManager } from '../auth/pin';
-import { isAllowedRemote, normalizeIp } from './ipAllowlist';
+import { isAllowedRemote, normalizeIp, rateKey } from './ipAllowlist';
 
 /** Tope de conexiones sin autenticar (frena el agotamiento de recursos desde la LAN). */
 export const MAX_UNAUTH_CONNECTIONS = 16;
@@ -98,14 +98,22 @@ export class Signaling {
     const host = req.headers.host;
     if (typeof host !== 'string' || !isIpOrLocalhostHost(host)) return false;
     if (req.headers.origin !== `https://${host}`) return false;
-    let unauth = 0;
-    for (const conn of this.peers) if (!conn.isAuthenticated) unauth++;
-    return unauth < MAX_UNAUTH_CONNECTIONS;
+    // DoS: pocas conexiones sin autenticar por origen (/64 en IPv6); si se llena el cupo global, se
+    // expulsa la más vieja que todavía no hizo nada útil, así un celular emparejado siempre puede entrar.
+    const origin = rateKey(req.socket.remoteAddress ?? '');
+    const pending = [...this.peers].filter((c) => !c.isAuthenticated);
+    if (pending.filter((c) => c.origin === origin).length >= MAX_UNAUTH_PER_ORIGIN) return false;
+    if (pending.length >= MAX_UNAUTH_CONNECTIONS) {
+      const oldest = pending.filter((c) => c.isEvictable).sort((a, b) => a.createdAt - b.createdAt)[0];
+      if (!oldest) return false;
+      oldest.close(CLOSE.rateLimited, 'evicted');
+    }
+    return true;
   }
 
   private onConnection(ws: WebSocket, req: IncomingMessage): void {
     const ip = normalizeIp(req.socket.remoteAddress)?.address ?? 'desconocida';
-    const conn = new Connection(ws, ip, this.deps, () => this.peers.delete(conn));
+    const conn = new Connection(ws, ip, rateKey(req.socket.remoteAddress ?? ''), this.deps, () => this.peers.delete(conn));
     this.peers.add(conn);
   }
 }
@@ -121,6 +129,13 @@ class Connection implements SignalingPeer {
   private joined = false;
   deviceId = '';
   deviceName = '';
+  readonly createdAt = Date.now();
+  private firstMessageTimer: NodeJS.Timeout;
+
+  /** Se puede expulsar si todavía no está esperando la aprobación del usuario. */
+  get isEvictable(): boolean {
+    return this.state === 'unauth' || this.state === 'challenged';
+  }
 
   get isAuthenticated(): boolean {
     return this.state === 'authed';
@@ -129,13 +144,16 @@ class Connection implements SignalingPeer {
   constructor(
     private readonly ws: WebSocket,
     readonly ip: string,
+    readonly origin: string,
     private readonly deps: SignalingDeps,
     private readonly onGone: () => void,
   ) {
     this.unauthTimer = setTimeout(() => {
       if (this.state !== 'authed') this.close(CLOSE.unauthTimeout, 'timeout');
     }, deps.unauthTimeoutMs ?? UNAUTH_TIMEOUT_MS);
+    this.firstMessageTimer = setTimeout(() => this.close(CLOSE.unauthTimeout, 'idle'), FIRST_MESSAGE_TIMEOUT_MS);
     ws.on('message', (data, isBinary) => {
+      clearTimeout(this.firstMessageTimer);
       void this.onMessage(data, isBinary);
     });
     ws.on('close', () => {
@@ -169,6 +187,7 @@ class Connection implements SignalingPeer {
   private cleanup(): void {
     this.state = 'closed';
     clearTimeout(this.unauthTimer);
+    clearTimeout(this.firstMessageTimer);
     this.approvalAbort.abort();
     if (this.joined) {
       this.joined = false;
@@ -226,13 +245,14 @@ class Connection implements SignalingPeer {
 
   private async onUnauth(msg: ClientSignal): Promise<void> {
     if (msg.t === 'pair.token') {
-      if (this.deps.tokens.consume(msg.token)) await this.requestApproval(msg.deviceName);
+      if (this.deps.tokens.consume(msg.token)) await this.requestApproval(msg.deviceName, 'qr');
       else this.fail('TOKEN_INVALID', CLOSE.forbidden);
     } else if (msg.t === 'pair.pin') {
       const attempt = this.deps.pins.attempt(this.ip, msg.pin);
-      if (attempt.ok) await this.requestApproval(msg.deviceName);
+      if (attempt.ok) await this.requestApproval(msg.deviceName, 'pin');
       else if (attempt.code === 'PIN_LOCKED') this.fail('PIN_LOCKED', CLOSE.forbidden, attempt.retryAfterMs);
-      else this.fail('PIN_INVALID', null);
+      // Cerrar obliga a reconectar por cada intento: más caro probar PINs en paralelo.
+      else this.fail('PIN_INVALID', CLOSE.forbidden);
     } else if (msg.t === 'auth.hello') {
       this.state = 'challenged';
       this.deviceId = msg.deviceId;
@@ -249,6 +269,7 @@ class Connection implements SignalingPeer {
     }
     const secret = this.deps.devices.secretFor(msg.deviceId);
     const valid = await this.challenge.verify(msg.deviceId, msg.hmac, secret);
+    if (this.isClosed()) return;
     // El dispositivo pudo ser revocado mientras se calculaba el HMAC.
     if (!valid || !this.deps.devices.has(msg.deviceId)) {
       this.fail('AUTH_FAILED', CLOSE.forbidden);
@@ -269,12 +290,12 @@ class Connection implements SignalingPeer {
     }
   }
 
-  private async requestApproval(deviceName: string): Promise<void> {
+  private async requestApproval(deviceName: string, method: 'qr' | 'pin'): Promise<void> {
     this.state = 'pending';
     // El diálogo tiene su propio límite (60 s): el timeout de 15 s sin autenticar no aplica mientras espera.
     clearTimeout(this.unauthTimer);
     this.send({ t: 'pair.pending' });
-    const result = await this.deps.approval.request(deviceName, this.ip, this.approvalAbort.signal);
+    const result = await this.deps.approval.request(deviceName, this.ip, method, this.approvalAbort.signal);
     if (this.isClosed()) return; // se desconectó mientras tanto
     if (result !== 'approved') {
       this.unauthTimer = setTimeout(() => this.close(CLOSE.unauthTimeout, 'timeout'), this.deps.unauthTimeoutMs ?? UNAUTH_TIMEOUT_MS);

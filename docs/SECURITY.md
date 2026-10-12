@@ -15,7 +15,7 @@
 | Amenaza | Control | Dónde |
 |---|---|---|
 | Acceso desde fuera de la LAN | allowlist IP en `connection` TCP (antes del TLS) | `main/server/ipAllowlist.ts` |
-| Fuerza bruta de PIN | 5 fallos/IP → 5 min; 10 fallos totales → PIN nuevo; vence a 2 min; diálogo de aprobación | `main/auth/pin.ts` |
+| Fuerza bruta de PIN | 5 fallos por IP (/64 en IPv6) → 5 min; 20 intentos/min en total; 10 fallos → PIN nuevo; vence a 2 min; socket cerrado al fallar; diálogo de aprobación | `main/auth/pin.ts` |
 | Robo del token del QR | fragment `#t=` (no viaja en HTTP), un uso, 2 min, se borra del historial | `main/auth/token.ts`, client |
 | Emparejamiento no autorizado | aprobación explícita en la PC (60 s, uno por vez) | `main/auth/approval.ts` |
 | Replay de autenticación | nonce aleatorio de 32 B, un uso, 30 s; `timingSafeEqual` | `main/auth/challenge.ts` |
@@ -34,15 +34,39 @@
 | Logs con secretos | no se loguean token, PIN, nonce, secret ni HMAC | revisión |
 
 ## Credenciales en el celular
-`deviceId` + `deviceSecret` van en localStorage (pedido del diseño). Riesgo: un XSS en el origen podría leerlos. Mitigación:
-CSP `script-src 'self'`, sin scripts de terceros, sin `innerHTML`/`dangerouslySetInnerHTML`, todo el contenido externo
-renderizado por React (escapado). Revocar desde la PC invalida el secreto.
+El `deviceId` va en localStorage; el secreto se guarda como `CryptoKey` HMAC **no exportable** en IndexedDB (ADR-0009):
+un script en el origen puede firmar mientras esté, pero no llevarse el secreto. Además: CSP `script-src 'self'`, sin
+scripts de terceros, sin `innerHTML`; revocar desde la PC invalida el secreto.
 
 ## Límites conocidos
-- Si el usuario acepta una advertencia de certificado distinta (MITM activo en la LAN) durante el emparejamiento,
-  un atacante podría hacer de intermediario. Mitigación: instalar la CA local (ADR-0001) o emparejar solo en redes de confianza.
+- MITM en la LAN: si el usuario acepta la advertencia de un certificado ajeno (en cualquier conexión, no solo al emparejar),
+  el atacante puede hacer de intermediario mientras dure el ataque (usar la clave, no extraerla). La PC avisa si el dispositivo
+  reaparece desde otra IP. La defensa completa es instalar la CA local comparando la huella (ADR-0001).
+- `safeStorage` (DPAPI) protege de otros usuarios de Windows, no de procesos del mismo usuario.
+- Tailscale: `100.64.0.0/10` se acepta en cualquier interfaz (es CGNAT; en una LAN normal no aparece).
 - No se puede controlar el escritorio seguro (UAC, login, Ctrl+Alt+Supr) ni ventanas elevadas.
 - Contenido DRM se ve negro.
 
+## Auditoría adversarial (Fase 5, 2026-10-12)
+Un auditor con contexto fresco atacó emparejamiento y protocolo. Hallazgos y estado:
+
+| Id | Sev. | Hallazgo | Estado |
+|---|---|---|---|
+| A1 | Alto | PIN por fuerza bruta rotando IPv6 (bloqueo por IP exacta; PIN siempre activo) | **Corregido**: bloqueo por /64, límite global 20 intentos/min, el socket se cierra al primer PIN inválido, el diálogo dice si vino por PIN o QR |
+| A2 | Alto | MITM roba el secreto de localStorage en cualquier reconexión | **Mitigado**: clave no exportable (ADR-0009) + aviso de reconexión desde otra IP; defensa total = CA instalada |
+| M1 | Medio | `/ca.crt` por canal no autenticado | **Mitigado**: la UI pide comparar la huella SHA-256 antes de confiar |
+| M2 | Medio | DoS con 16 sockets sin autenticar | **Corregido**: 4 por origen (/64), cierre a los 5 s sin primer mensaje, se expulsa la más vieja en lugar de rechazar |
+| M3 | Medio | Atacante deja el PIN inutilizable | **Aceptado**: el límite global puede bloquear el PIN un minuto; el QR sigue funcionando |
+| B1 | Bajo | Comandos sin rate limit | **Corregido**: 10/s (ráfaga 20) |
+| B2 | Bajo | Listeners acumulados y ack de lo recibido | **Corregido**: listeners se quitan; ack de lo escrito en disco |
+| B3 | Bajo | Carreras al terminar un archivo | **Corregido**: se verifica la transferencia tras cada await; movida exclusiva (`link`) sin pisar |
+| B4 | Bajo | Archivos sin Mark-of-the-Web; `desktop.ini`/`.library-ms` | **Corregido**: `Zone.Identifier` ZoneId=3; extensiones peligrosas quedan `.bloqueado` |
+| B5 | Bajo | Disco lleno / `.part` huérfanos | **Corregido**: chequeo de espacio libre (+256 MiB) y limpieza al arrancar |
+| B6 | Bajo | Atajo de corte tomado por otro programa | **Corregido**: aviso visible en la ventana |
+| B7 | Bajo | Sin Electron fuses | **Corregido**: RunAsNode, NODE_OPTIONS e inspector off; integridad del asar; solo carga desde asar |
+| B8 | Bajo | Input encolado inyectado tras `stop()` | **Corregido** |
+| Info | — | SAS con teclas sueltas, `CONIN$`/`CONOUT$`, SDP en logs, `isClosed` tras el HMAC | **Corregidos** |
+
 ## Revisiones
 - 2026-10-12, cierre Fase 1: timeout de aprobación, tope de conexiones, Host IP-only. Ver PROGRESS.md.
+- 2026-10-12, cierre Fase 5: auditoría adversarial (tabla de arriba).

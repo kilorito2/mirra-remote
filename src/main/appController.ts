@@ -52,6 +52,7 @@ export class AppController {
   private lastPairingKey = '';
   private readonly transfers = new Map<string, TransferView>();
   private lastTransferBroadcast = 0;
+  hotkeyOk = true;
 
   constructor(private readonly deps: AppControllerDeps) {
     this.settings = new SettingsStore(join(deps.userData, 'settings.json'));
@@ -119,6 +120,7 @@ export class AppController {
       settings: { preset: s.preset, audio: s.audio, startWithWindows: s.startWithWindows, hardwareEncoding: s.hardwareEncoding },
       transfers: [...this.transfers.values()],
       firstRun: !s.firstRunDone,
+      hotkeyOk: this.hotkeyOk,
       caFingerprint: this.cert?.caFingerprint ?? '',
     };
   }

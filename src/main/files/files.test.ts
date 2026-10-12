@@ -143,3 +143,41 @@ describe('FileSender', () => {
     expect(s.enqueue('C:/no/existe.bin')).toEqual({ ok: false, reason: 'NOT_FOUND' });
   });
 });
+
+describe('endurecimiento (auditoría)', () => {
+  it('extensiones que Windows interpreta quedan inertes', async () => {
+    const { defuseName } = await import('./fileReceiver');
+    expect(defuseName('desktop.ini')).toBe('desktop.ini.bloqueado');
+    expect(defuseName('x.library-ms')).toBe('x.library-ms.bloqueado');
+    expect(defuseName('acceso.LNK')).toBe('acceso.LNK.bloqueado');
+    expect(defuseName('foto.jpg')).toBe('foto.jpg');
+    expect(sanitizeFileName('CONIN$')).toBe('_CONIN$');
+  });
+
+  it('sin espacio libre se rechaza antes de escribir', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'kr-full-'));
+    const sent: FileMessage[] = [];
+    const r = new FileReceiver({ dir: () => dir, send: (m) => sent.push(m), onProgress: () => undefined, freeBytes: () => 100 * 1024 * 1024 });
+    r.message({ t: 'file.offer', id: 'h', name: 'a.bin', size: 10, mime: '' });
+    expect(sent).toEqual([{ t: 'file.error', id: 'h', code: 'DISK' }]);
+    expect(readdirSync(dir)).toEqual([]);
+  });
+
+  it('marca el archivo como bajado de internet (Mark-of-the-Web)', async () => {
+    const { r, dir } = receiver();
+    r.message({ t: 'file.offer', id: 'i', name: 'setup.exe', size: 3, mime: '' });
+    r.chunk(new Uint8Array(3));
+    r.message({ t: 'file.end', id: 'i' });
+    await r.flushed();
+    if (process.platform === 'win32') expect(readFileSync(join(dir, 'setup.exe:Zone.Identifier'), 'utf8')).toContain('ZoneId=3');
+  });
+
+  it('limpia parciales de una caída', async () => {
+    const { cleanupPartials } = await import('./fileReceiver');
+    const dir = mkdtempSync(join(tmpdir(), 'kr-parts-'));
+    writeFileSync(join(dir, 'a.bin.part'), 'x');
+    writeFileSync(join(dir, 'b.txt'), 'x');
+    cleanupPartials(dir);
+    expect(readdirSync(dir)).toEqual(['b.txt']);
+  });
+});

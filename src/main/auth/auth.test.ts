@@ -104,6 +104,21 @@ describe('PinManager', () => {
     expect(pins.attempt('10.0.2.1', '123456').ok).toBe(false);
   });
 
+  it('rotar IPs (o inventar IPv6 dentro del mismo /64) no da más de 20 intentos por minuto', () => {
+    const clock = fakeClock();
+    const pins = new PinManager(clock.now, seq('123456'));
+    const results = Array.from({ length: 40 }, (_, i) => pins.attempt(`10.0.${i}.1`, '000000'));
+    expect(results.filter((r) => !r.ok && r.code === 'PIN_LOCKED').length).toBeGreaterThanOrEqual(20);
+    clock.advance(60_000);
+    expect(pins.attempt('10.9.9.9', pins.current().pin).ok).toBe(true);
+  });
+
+  it('fe80::1 y fe80::2 comparten el bloqueo por /64', () => {
+    const pins = new PinManager(undefined, seq('123456'));
+    for (let i = 0; i < 4; i++) pins.attempt(`fe80::${i + 1}`, '000000');
+    expect(pins.attempt('fe80::99', '000000')).toMatchObject({ code: 'PIN_LOCKED' });
+  });
+
   it('genera PINs de 6 dígitos con ceros a la izquierda', () => {
     for (let i = 0; i < 50; i++) expect(new PinManager().current().pin).toMatch(/^\d{6}$/);
   });
@@ -190,29 +205,29 @@ describe('DeviceStore', () => {
 
 describe('ApprovalGate', () => {
   it('aprueba o rechaza según el usuario', async () => {
-    expect(await new ApprovalGate(() => Promise.resolve(true)).request('Pixel', '10.0.0.2')).toBe('approved');
-    expect(await new ApprovalGate(() => Promise.resolve(false)).request('Pixel', '10.0.0.2')).toBe('rejected');
+    expect(await new ApprovalGate(() => Promise.resolve(true)).request('Pixel', '10.0.0.2', 'qr')).toBe('approved');
+    expect(await new ApprovalGate(() => Promise.resolve(false)).request('Pixel', '10.0.0.2', 'qr')).toBe('rejected');
   });
 
   it('un diálogo a la vez', async () => {
     let resolve: (v: boolean) => void = () => undefined;
     const gate = new ApprovalGate(() => new Promise<boolean>((r) => (resolve = r)));
-    const first = gate.request('A', '10.0.0.2');
-    expect(await gate.request('B', '10.0.0.3')).toBe('busy');
+    const first = gate.request('A', '10.0.0.2', 'qr');
+    expect(await gate.request('B', '10.0.0.3', 'qr')).toBe('busy');
     resolve(true);
     expect(await first).toBe('approved');
   });
 
   it('se rechaza solo al vencer', async () => {
     const gate = new ApprovalGate(() => new Promise<boolean>(() => undefined), 20);
-    expect(await gate.request('A', '10.0.0.2')).toBe('rejected');
+    expect(await gate.request('A', '10.0.0.2', 'qr')).toBe('rejected');
     expect(gate.pending).toBe(false);
   });
 
   it('se cancela si el celular se desconecta', async () => {
     const cancel = new AbortController();
     const gate = new ApprovalGate(() => new Promise<boolean>(() => undefined));
-    const result = gate.request('A', '10.0.0.2', cancel.signal);
+    const result = gate.request('A', '10.0.0.2', 'qr', cancel.signal);
     cancel.abort();
     expect(await result).toBe('rejected');
   });

@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { extname, join } from 'node:path';
 
-const RESERVED = /^(con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³])(\..*)?$/i;
+const RESERVED = /^(con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³])(\..*)?$/i;
 
 /**
  * Nombre seguro para Windows a partir del que manda el celular (R24): sin rutas, sin caracteres

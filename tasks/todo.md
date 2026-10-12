@@ -44,8 +44,8 @@ Verificación estándar de cada tarea: `npm run typecheck && npm run lint && npm
 - [x] Checkpoint F4
 
 ## Fase 5 — Hardening y release
-- [ ] 5.1 Bounty hunt (pairing + protocolo) y fixes con tests.
-- [ ] 5.2 electron-builder NSIS, asarUnpack, assert-no-test-mode, ícono.
-- [ ] 5.3 README + docs/TESTING-MANUAL.md + SECURITY.md final.
-- [ ] 5.4 Todo verde (typecheck, lint, unit, E2E, android) + ship checklist.
+- [x] 5.1 Bounty hunt (pairing + protocolo) y fixes con tests.
+- [x] 5.2 electron-builder NSIS, asarUnpack, assert-no-test-mode, ícono.
+- [x] 5.3 README + docs/TESTING-MANUAL.md + SECURITY.md final.
+- [x] 5.4 Todo verde (typecheck, lint, unit, E2E, android) + ship checklist.
 - [ ] CHECKPOINT FINAL (manual del usuario)

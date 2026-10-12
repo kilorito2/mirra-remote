@@ -61,6 +61,7 @@ export default defineConfig(({ mode }) => {
       resolve: { alias },
       plugins: [react(), tailwindcss(), rendererCsp()],
       build: {
+        minify: mode === 'production',
         assetsInlineLimit: 0,
         rollupOptions: {
           input: {

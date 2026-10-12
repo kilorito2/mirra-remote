@@ -170,7 +170,8 @@ export class ElectronHostBridge implements HostBridge {
     win.webContents.on('render-process-gone', () => this.gone(win));
     // Los errores del host (captura, negociación) quedan en la consola de main para diagnosticar.
     win.webContents.on('console-message', (event) => {
-      if (event.level === 'error' || event.level === 'warning') console.error('[kr] host console:', event.message);
+      // Sin SDP en los logs: trae credenciales ICE (ice-pwd).
+      if (event.level === 'error' || event.level === 'warning') console.error('[kr] host console:', event.message.replace(/a=ice-pwd:\S+/g, 'a=ice-pwd:***').slice(0, 300));
     });
     win.on('closed', () => this.gone(win));
     this.win = win;

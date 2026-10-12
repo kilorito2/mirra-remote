@@ -2,9 +2,12 @@ import { randomInt } from 'node:crypto';
 import {
   PIN_LOCKOUT_MS,
   PIN_MAX_ATTEMPTS_PER_IP,
+  PIN_GLOBAL_ATTEMPTS_PER_MIN,
   PIN_MAX_TOTAL_FAILURES,
   PIN_TTL_MS,
 } from '@shared/constants';
+import { TokenBucket } from '@shared/tokenBucket';
+import { rateKey } from '../server/ipAllowlist';
 import { secureEqual, systemClock, type Clock } from './secureCompare';
 
 export interface PinState {
@@ -37,12 +40,14 @@ export class PinManager {
   private state: PinState;
   private totalFailures = 0;
   private readonly ips = new Map<string, IpRecord>();
+  private readonly global: TokenBucket;
 
   constructor(
     private readonly clock: Clock = systemClock,
     private readonly generate: PinGenerator = cryptoPin,
     private readonly onRotate: (state: PinState) => void = () => undefined,
   ) {
+    this.global = new TokenBucket(PIN_GLOBAL_ATTEMPTS_PER_MIN / 60, PIN_GLOBAL_ATTEMPTS_PER_MIN, clock);
     this.state = this.fresh();
   }
 
@@ -58,9 +63,12 @@ export class PinManager {
     return this.state;
   }
 
-  attempt(ip: string, candidate: string): PinAttempt {
+  attempt(origin: string, candidate: string): PinAttempt {
     const now = this.clock();
     this.prune(now);
+    const ip = rateKey(origin);
+    // Límite global: aunque se roten IPs, no hay más de 20 intentos por minuto en total.
+    if (!this.global.tryTake()) return { ok: false, code: 'PIN_LOCKED', retryAfterMs: 60_000 };
     const record = this.ips.get(ip) ?? { failures: 0, lockedUntil: 0, lastAt: now };
     record.lastAt = now;
 

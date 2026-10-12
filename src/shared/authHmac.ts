@@ -11,3 +11,12 @@ export async function computeAuthHmac(deviceSecret: string, nonce: string): Prom
   const mac = await subtle.sign('HMAC', key, new TextEncoder().encode(HMAC_CONTEXT + nonce));
   return bytesToBase64url(new Uint8Array(mac));
 }
+
+/** CryptoKey sin depender de lib.dom (este módulo también compila para Node). */
+type HmacKey = Awaited<ReturnType<typeof globalThis.crypto.subtle.importKey>>;
+
+/** Igual que computeAuthHmac pero con una CryptoKey (no exportable) ya importada. */
+export async function signAuthNonce(key: HmacKey, nonce: string): Promise<string> {
+  const mac = await globalThis.crypto.subtle.sign('HMAC', key, new TextEncoder().encode(HMAC_CONTEXT + nonce));
+  return bytesToBase64url(new Uint8Array(mac));
+}

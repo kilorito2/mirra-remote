@@ -15,6 +15,7 @@ import { PinManager } from '../auth/pin';
 import { SessionManager, type HostBridge } from '../session/sessionManager';
 import { ensureCertificates } from './certs';
 import { createHttpServer, indexStaticDir } from './httpServer';
+import { MAX_UNAUTH_PER_ORIGIN } from '@shared/constants';
 import { MAX_UNAUTH_CONNECTIONS, Signaling, isIpOrLocalhostHost } from './signaling';
 
 const cipher: SecretCipher = {
@@ -263,11 +264,14 @@ describe('Signaling', () => {
     expect(devices.list().some((d) => d.name === 'Intruso')).toBe(false);
   });
 
-  it('empareja por PIN; PIN incorrecto no cierra hasta bloquear', async () => {
+  it('empareja por PIN; un PIN incorrecto cierra el socket', async () => {
+    const bad = new Client();
+    await bad.open();
+    bad.send({ t: 'pair.pin', v: 1, pin: pins.current().pin === '000000' ? '111111' : '000000', deviceName: 'PIN' });
+    expect((await bad.next('error')).code).toBe('PIN_INVALID');
+    expect(await bad.closed()).toBe(4403);
     const c = new Client();
     await c.open();
-    c.send({ t: 'pair.pin', v: 1, pin: pins.current().pin === '000000' ? '111111' : '000000', deviceName: 'PIN' });
-    expect((await c.next('error')).code).toBe('PIN_INVALID');
     c.send({ t: 'pair.pin', v: 1, pin: pins.current().pin, deviceName: 'PIN' });
     await c.next('auth.ok');
     c.ws.close();
@@ -354,9 +358,9 @@ describe('Signaling: endurecimiento', () => {
     expect(await c.closed()).toBe(4401);
   });
 
-  it(`tope de ${MAX_UNAUTH_CONNECTIONS} conexiones sin autenticar`, async () => {
+  it(`tope de ${MAX_UNAUTH_PER_ORIGIN} conexiones sin autenticar por origen (global ${MAX_UNAUTH_CONNECTIONS})`, async () => {
     const clients: Client[] = [];
-    for (let i = 0; i < MAX_UNAUTH_CONNECTIONS; i++) {
+    for (let i = 0; i < MAX_UNAUTH_PER_ORIGIN; i++) {
       const c = new Client();
       await c.open();
       clients.push(c);
