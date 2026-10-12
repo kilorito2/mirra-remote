@@ -45,3 +45,19 @@ no tiene. Hallazgos corregidos con tests: (1) el timeout de 15 s sin autenticar 
 **Desvíos del prompt**
 - Skills `ecc:*` no instaladas; se usaron los equivalentes de `agent-skills:*` y `frontend-design:*`.
 - Playwright Android vía CDP en lugar de `launchBrowser` (motivo arriba).
+
+## Fase 2 — Video ✅ (2026-10-12)
+**Hecho**
+- Renderer host oculto (`backgroundThrottling: false`) con `HostPeer`: `getDisplayMedia()` → handler de main
+  (`desktopCapturer` + `audio: 'loopback'`, sin selector del sistema), la PC siempre ofertante, DataChannels negociados (0/1/2).
+- H.264 primero con `setCodecPreferences` (`shared/media.ts`, puro y testeado) → negociado H.264 en desktop y Android.
+- Presets en vivo con `setParameters` (contentHint, degradationPreference, fps, bitrate, `scaleResolutionDownBy` a 720p).
+- `replaceTrack` preparado para multi-monitor (`display.set`), audio con m-line fija (activar/desactivar sin renegociar).
+- Celular: `PhonePeer` (contesta, cola de candidatos, ICE restart a los 2 s de `disconnected` o en `failed`, chequeo al volver
+  de segundo plano), `SessionScreen` con `<video playsinline autoplay muted>` y la sesión sigue visible si solo se cae el WS.
+- Reanudación: `session.join{resume}` → ICE restart sin cortar; recargar la página vuelve a negociar.
+- Puerto `ScreenSource` + `ElectronScreenSource` (rect físico con `dipToScreenRect`).
+- ADR-0007 aceptado: no hizo falta tocar mDNS. ADR-0003 verificado.
+
+**Tests**: 153 unit · 22 E2E desktop (4 de video en Chromium; WebKit sin WebRTC) · 4 Android (video H.264 1366×768,
+`framesDecoded` sube, screencap revisado: se ve la pantalla de la PC y el borde rojo no aparece en la captura).

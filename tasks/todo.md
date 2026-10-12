@@ -18,12 +18,12 @@ Verificación estándar de cada tarea: `npm run typecheck && npm run lint && npm
 - [x] Checkpoint F1: security-review + review + simplify; PROGRESS; commit `feat(fase-1): ...`
 
 ## Fase 2 — Video
-- [ ] 2.1 Renderer host + `setDisplayMediaRequestHandler` + HostPeer (oferta, DataChannels negociados, relay de signaling por IPC).
-- [ ] 2.2 Client: RTCPeerConnection que contesta, `<video playsinline autoplay muted>` a pantalla completa.
-- [ ] 2.3 Preferencia H.264 → VP8 y presets con `setParameters` (en vivo desde PC y celular).
-- [ ] 2.4 ICE restart / reconexión WS con `session.join{resume}`; ADR-0007 resuelto.
-- [ ] 2.5 Android: `videoWidth>0`, `framesDecoded` sube, screencap revisado.
-- [ ] Checkpoint F2
+- [x] 2.1 Renderer host + `setDisplayMediaRequestHandler` + HostPeer (oferta, DataChannels negociados, relay de signaling por IPC).
+- [x] 2.2 Client: RTCPeerConnection que contesta, `<video playsinline autoplay muted>` a pantalla completa.
+- [x] 2.3 Preferencia H.264 → VP8 y presets con `setParameters` (en vivo desde PC y celular).
+- [x] 2.4 ICE restart / reconexión WS con `session.join{resume}`; ADR-0007 resuelto.
+- [x] 2.5 Android: `videoWidth>0`, `framesDecoded` sube, screencap revisado.
+- [x] Checkpoint F2
 
 ## Fase 3 — Control
 - [ ] 3.1 Puertos + FakeInjector + RobotJsInjector + InputController (clamp, rate limit, watchdog 3 s, releaseAll, seq).

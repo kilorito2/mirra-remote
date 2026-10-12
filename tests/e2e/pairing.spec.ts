@@ -15,7 +15,7 @@ test.afterEach(async () => {
 async function pairByQr(page: Page): Promise<void> {
   const token = await kr.hook('token');
   await page.goto(`${baseUrl(PORT)}/#t=${token}`);
-  await expect(page.getByRole('heading', { name: /^Conectado a / })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Salir' })).toBeVisible();
 }
 
 test('@pairing empareja por QR, borra el token de la URL y enciende los indicadores', async ({ page }) => {
@@ -31,7 +31,7 @@ test('@pairing empareja por PIN', async ({ page }) => {
   await page.goto(baseUrl(PORT));
   await page.getByLabel('PIN').fill(await kr.hook('pin'));
   await page.getByRole('button', { name: 'Conectar' }).click();
-  await expect(page.getByRole('heading', { name: /^Conectado a / })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Salir' })).toBeVisible();
 });
 
 test('@pairing PIN incorrecto se informa', async ({ page }) => {
@@ -44,18 +44,18 @@ test('@pairing PIN incorrecto se informa', async ({ page }) => {
 
 test('@pairing reconecta con challenge-response sin volver a aprobar', async ({ page }) => {
   await pairByQr(page);
-  await page.getByRole('button', { name: 'Cortar' }).click();
+  await page.getByRole('button', { name: 'Salir' }).click();
   await expect(page.getByRole('heading', { name: 'Sesión terminada' })).toBeVisible();
   await expect.poll(() => kr.hook('indicators')).toEqual({ live: false, overlay: false });
   await page.goto(baseUrl(PORT));
-  await expect(page.getByRole('heading', { name: /^Conectado a / })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Salir' })).toBeVisible();
   expect((await kr.hook('state')).devices).toHaveLength(1);
 });
 
 test('@pairing token reusado es rechazado', async ({ page, browser }) => {
   const token = await kr.hook('token');
   await page.goto(`${baseUrl(PORT)}/#t=${token}`);
-  await expect(page.getByRole('heading', { name: /^Conectado a / })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Salir' })).toBeVisible();
 
   const other = await browser.newContext({ ignoreHTTPSErrors: true });
   const second = await other.newPage();

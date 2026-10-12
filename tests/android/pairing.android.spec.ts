@@ -21,7 +21,7 @@ test('Chrome Android empareja abriendo la URL del QR', async () => {
   const opened = await openViaIntent(`${baseUrl(ANDROID_PORT)}/#t=${token}`);
   browser = opened.browser;
   const { page } = opened;
-  await expect(page.getByRole('heading', { name: /^Conectado a / })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Salir' })).toBeVisible();
   expect(await page.evaluate(() => window.isSecureContext && typeof crypto.subtle.sign === 'function')).toBe(true);
   await expect.poll(() => kr.hook('state').then((s) => s.session.status)).toBe('active');
   screencap('fase1-emparejado-qr');
@@ -33,7 +33,7 @@ test('Chrome Android empareja por PIN', async () => {
   const { page } = opened;
   await page.getByLabel('PIN').fill(await kr.hook('pin'));
   await page.getByRole('button', { name: 'Conectar' }).click();
-  await expect(page.getByRole('heading', { name: /^Conectado a / })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Salir' })).toBeVisible();
 });
 
 test('token reusado y dispositivo sin emparejar son rechazados', async () => {
@@ -41,7 +41,7 @@ test('token reusado y dispositivo sin emparejar son rechazados', async () => {
   const opened = await openViaIntent(url);
   browser = opened.browser;
   const { page } = opened;
-  await expect(page.getByRole('heading', { name: /^Conectado a / })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Salir' })).toBeVisible();
 
   // Mismo token, sin credenciales (otro celular que copió el QR): tiene que fallar.
   await page.evaluate(() => localStorage.clear());

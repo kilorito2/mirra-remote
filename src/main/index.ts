@@ -7,7 +7,10 @@ import { createSafeStorageCipher } from './auth/electronCipher';
 import type { AskUser } from './auth/approval';
 import { SessionIndicators } from './indicators';
 import { registerUiIpc } from './ipc/uiIpc';
-import type { HostBridge } from './session/sessionManager';
+import type { HostInput } from '@shared/hostIpc';
+import { ElectronScreenSource, electronDisplay } from './adapters/ElectronScreenSource';
+import { installCaptureHandler } from './capture';
+import { ElectronHostBridge } from './hostBridge';
 import { resolveTestMode } from './testMode';
 import { configurePermissions, createMainWindow, loadPage } from './windows';
 
@@ -18,6 +21,8 @@ const startHidden = process.argv.includes('--hidden');
 let mainWindow: BrowserWindow | null = null;
 let indicators: SessionIndicators | null = null;
 let controller: AppController | null = null;
+let host: ElectronHostBridge | null = null;
+const screens = new ElectronScreenSource();
 let quitting = false;
 
 if (!app.requestSingleInstanceLock()) {
@@ -62,14 +67,6 @@ function buildMainWindow(): BrowserWindow {
   return win;
 }
 
-/** Fase 1: todavía no hay WebRTC (llega en la Fase 2). */
-const nullHost: HostBridge = {
-  start: () => undefined,
-  signal: () => undefined,
-  stop: () => undefined,
-  isPeerConnected: () => false,
-};
-
 const askUser: AskUser = async ({ deviceName, ip }, signal) => {
   showMainWindow();
   const options: MessageBoxOptions = {
@@ -87,9 +84,62 @@ const askUser: AskUser = async ({ deviceName, ip }, signal) => {
   return response === 1;
 };
 
+function sendStateToPhone(): void {
+  if (!host || !controller) return;
+  const s = controller.settings.get();
+  host.sendControl({
+    t: 'state',
+    displays: screens.listDisplays().map(({ physical: _physical, ...info }) => info),
+    activeDisplayId: host.activeDisplayId,
+    preset: s.preset,
+    audio: s.audio,
+  });
+}
+
+/** Mensajes de control del celular que no son input (el input llega en la Fase 3). */
+function onPhoneMessage(msg: HostInput): void {
+  if (!controller || !host) return;
+  switch (msg.t) {
+    case 'quality.set':
+      controller.setPreset(msg.preset);
+      break;
+    case 'display.select': {
+      if (host.setDisplay(msg.displayId)) {
+        const display = electronDisplay(msg.displayId);
+        if (display) indicators?.displayChanged(display);
+      }
+      sendStateToPhone();
+      break;
+    }
+    case 'session.end':
+      controller.endSession('USER');
+      break;
+    default:
+      break;
+  }
+}
+
 async function boot(): Promise<void> {
   app.setAppUserModelId('com.kilorito.remote');
-  configurePermissions(() => false);
+  host = new ElectronHostBridge({
+    screens,
+    settings: () => controller?.settings.get() ?? { preset: 'sharp', audio: true },
+    toPeer: (msg) => controller?.session.sendToPeer(msg),
+    onPeerState: (state) => {
+      if (state === 'failed' || state === 'closed') controller?.session.hostDisconnected();
+    },
+    onInput: onPhoneMessage,
+    onChannel: (label, open) => {
+      if (label === 'control' && open) sendStateToPhone();
+    },
+    onHostGone: () => controller?.endSession('ERROR'),
+  });
+  const hostRef = host;
+  configurePermissions((wc) => hostRef.isHostContents(wc));
+  installCaptureHandler(
+    (wc) => hostRef.isHostContents(wc),
+    () => ({ displayId: hostRef.activeDisplayId, audio: hostRef.audioEnabled }),
+  );
 
   indicators = new SessionIndicators({
     open: showMainWindow,
@@ -106,20 +156,25 @@ async function boot(): Promise<void> {
     testMode,
     cipher: createSafeStorageCipher(),
     ask: askUser,
-    host: nullHost,
+    host,
     events: {
       onState: (state) => {
         if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('ui:state', state);
       },
       onStatus: (status) => {
         if (status.status === 'active') {
-          if (!indicators?.isLive) indicators?.sessionStarted(status.deviceName);
+          const display = electronDisplay(hostRef.activeDisplayId);
+          if (!indicators?.isLive) indicators?.sessionStarted(status.deviceName, display);
         } else {
           indicators?.sessionEnded();
         }
       },
       onEnded: () => undefined,
-      onSettings: () => undefined,
+      onSettings: (settings) => {
+        hostRef.setPreset(settings.preset);
+        hostRef.setAudio(settings.audio);
+        sendStateToPhone();
+      },
     },
     setLoginItem: (on) => app.setLoginItemSettings({ openAtLogin: on, args: ['--hidden'] }),
   });
@@ -156,5 +211,6 @@ function exposeTestHooks(): void {
     token: () => c.tokens.current().token,
     pin: () => c.pins.current().pin,
     revoke: (deviceId) => c.revokeDevice(deviceId),
+    setPreset: (preset) => c.setPreset(preset),
   };
 }

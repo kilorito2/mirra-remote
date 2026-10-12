@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { SessionEndReason } from '@shared/protocol';
 import { guessDeviceName } from './net/credentials';
-import { SignalingClient, type Phase, type SignalingOptions } from './net/signaling';
 import { PinForm } from './screens/PinForm';
+import { SessionScreen } from './screens/SessionScreen';
 import { StatusScreen } from './screens/StatusScreen';
+import { defaultFactory, useRemote, type ClientFactory } from './useRemote';
 
 const NAME_KEY = 'kr.deviceName';
 
@@ -24,18 +25,27 @@ function storedName(): string {
   }
 }
 
-type ClientFactory = (opts: SignalingOptions) => SignalingClient;
-const defaultFactory: ClientFactory = (opts) => new SignalingClient(opts);
-
 export function App({ token, createClient = defaultFactory }: { token: string | null; createClient?: ClientFactory }) {
-  const [phase, setPhase] = useState<Phase>({ kind: 'connecting' });
   const [name, setName] = useState(storedName);
-  const [client] = useState(() => createClient({ token, deviceName: name, onPhase: setPhase }));
+  const remote = useRemote(token, name, createClient);
+  const { phase, client, stream, peerState } = remote;
 
-  useEffect(() => {
-    client.connect();
-    return () => client.stop();
-  }, [client]);
+  // Mientras WebRTC siga vivo, un corte del WS no saca al usuario de la pantalla remota.
+  const transient = phase.kind === 'offline' || phase.kind === 'connecting' || phase.kind === 'authenticating';
+  const peerAlive = peerState === 'connected' || peerState === 'disconnected' || peerState === 'connecting';
+  if (phase.kind === 'ready' || (transient && peerAlive && stream)) {
+    return (
+      <SessionScreen stream={stream} reconnecting={transient || peerState === 'disconnected'}>
+        <button
+          type="button"
+          onClick={() => client.end()}
+          className="absolute top-3 right-3 min-h-11 rounded-pill bg-selva/80 px-4 font-semibold text-pluma backdrop-blur"
+        >
+          Salir
+        </button>
+      </SessionScreen>
+    );
+  }
 
   return <main className="flex h-full items-center justify-center px-6 py-8">{render()}</main>;
 
@@ -43,6 +53,7 @@ export function App({ token, createClient = defaultFactory }: { token: string | 
     switch (phase.kind) {
       case 'connecting':
       case 'authenticating':
+      case 'ready':
         return <StatusScreen title="Buscando tu PC" busy />;
       case 'needPairing':
         return (
@@ -65,12 +76,6 @@ export function App({ token, createClient = defaultFactory }: { token: string | 
         return (
           <StatusScreen title="Aceptá la conexión en la PC" busy>
             Kilorito Remote preguntó si {name} puede controlar la PC.
-          </StatusScreen>
-        );
-      case 'ready':
-        return (
-          <StatusScreen title={`Conectado a ${phase.hostName}`} action={{ label: 'Cortar', onClick: () => client.end() }}>
-            La imagen de la pantalla llega en un instante.
           </StatusScreen>
         );
       case 'busy':
