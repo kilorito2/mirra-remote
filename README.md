@@ -91,7 +91,7 @@ Mirá y controlá tu PC con Windows desde el navegador del celular. Sin instalar
 
 ## ⬇ Instalar
 
-1. Descargá **`Mirra Setup.exe`** desde [Releases](https://github.com/kilorito2/mirra-remote/releases/latest) y ejecutalo.
+1. Descargá el instalador **`Mirra-Setup-x.y.z.exe`** desde [Releases](https://github.com/kilorito2/mirra-remote/releases/latest) y ejecutalo.
    > Windows SmartScreen puede avisar que la app no es conocida (no está firmada). Tocá **Más información › Ejecutar de todas formas**.
 2. Abrí Mirra. La primera vez Windows pide permiso de red: marcá **solo _Redes privadas_**. Así el celular te encuentra en casa y nadie te ve en un Wi-Fi público.
 3. Listo. Mirra queda en la bandeja del sistema (al lado del reloj), con este ícono: <img src="resources/tray-idle@2x.png" width="16" alt="ícono de Mirra en la bandeja">
