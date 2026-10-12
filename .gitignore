@@ -1,0 +1,12 @@
+node_modules/
+out/
+dist/
+dist-client/
+release/
+coverage/
+test-results/
+playwright-report/
+tests/android/artifacts/
+*.log
+.env
+.DS_Store
