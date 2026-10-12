@@ -1,6 +1,7 @@
 import { useState, type DragEvent } from 'react';
+import { DOWNLOADS_SUBDIR } from '@shared/constants';
 import type { TransferView } from '@shared/uiState';
-import { Button } from './controls';
+import { Card, Icon } from './controls';
 
 const STATE: Record<TransferView['state'], string> = { running: '', done: 'Listo', cancelled: 'Cancelado', error: 'Falló' };
 
@@ -12,13 +13,11 @@ function size(n: number): string {
 export function Transfers({
   active,
   transfers,
-  onPick,
   onDrop,
   onCancel,
 }: {
   active: boolean;
   transfers: TransferView[];
-  onPick: () => void;
   onDrop: (files: File[]) => void;
   onCancel: (id: string) => void;
 }) {
@@ -37,42 +36,64 @@ export function Transfers({
       }}
       onDragLeave={() => setOver(false)}
       onDrop={drop}
-      className={`space-y-3 rounded-xl p-1 ${over ? 'outline-2 outline-dashed outline-pico' : ''}`}
+      className="space-y-2"
     >
-      {active ? (
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-liquen">Soltá archivos acá o elegilos. Los del celular llegan a Descargas › Kilorito Remote.</p>
-          <Button variant="primary" onClick={onPick}>
-            Enviar al celular
-          </Button>
-        </div>
-      ) : (
-        <p className="text-sm text-liquen">Con un celular conectado vas a poder pasar archivos en los dos sentidos.</p>
-      )}
+      <div
+        className={`flex items-center gap-3 rounded-2xl border border-dashed p-4 text-[13px] text-liquen transition-colors ${
+          over ? 'border-pico bg-pico/8 text-pluma' : 'border-rama'
+        }`}
+      >
+        <Icon name="file" className="size-5 shrink-0" />
+        {active ? (
+          <p>Soltá archivos acá o elegilos. Los del celular llegan a Descargas › {DOWNLOADS_SUBDIR}.</p>
+        ) : (
+          <p>Con un celular conectado vas a poder pasar archivos en los dos sentidos.</p>
+        )}
+      </div>
       {transfers.length > 0 && (
-        <ul className="space-y-2" aria-label="Transferencias">
-          {[...transfers].reverse().map((t) => (
-            <li key={t.id} className="rounded-lg bg-hoja p-2">
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate">
-                  {t.direction === 'toPhone' ? 'Al celular: ' : 'Del celular: '}
-                  {t.name}
-                </span>
-                {t.state === 'running' ? (
-                  <button type="button" className="min-h-11 px-2 text-sm font-semibold text-alerta" onClick={() => onCancel(t.id)} aria-label={`Cancelar ${t.name}`}>
-                    Cancelar
-                  </button>
-                ) : (
-                  <span className="text-sm text-liquen">{STATE[t.state]}</span>
+        <Card>
+          <ul className="divide-y divide-linea" aria-label="Transferencias">
+            {[...transfers].reverse().map((t) => (
+              <li key={t.id} className="space-y-2 px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <Icon name={t.direction === 'toPhone' ? 'up' : 'down'} className="size-[18px] shrink-0 text-tenue" />
+                  <span className="min-w-0 grow truncate font-medium">
+                    <span className="sr-only">{t.direction === 'toPhone' ? 'Al celular: ' : 'Del celular: '}</span>
+                    {t.name}
+                  </span>
+                  {t.state === 'running' ? (
+                    <button
+                      type="button"
+                      className="flex size-11 shrink-0 items-center justify-center rounded-lg text-liquen transition-colors hover:bg-tecla hover:text-pluma"
+                      onClick={() => onCancel(t.id)}
+                      aria-label={`Cancelar ${t.name}`}
+                    >
+                      <Icon name="close" />
+                    </button>
+                  ) : (
+                    <span className={`flex items-center gap-1 text-xs ${t.state === 'done' ? 'text-menta' : 'text-liquen'}`}>
+                      {t.state === 'done' && <Icon name="check" className="size-3.5" />}
+                      {STATE[t.state]}
+                    </span>
+                  )}
+                </div>
+                {t.state === 'running' && (
+                  <>
+                    <progress
+                      className="block h-1 w-full overflow-hidden rounded-pill accent-pico [&::-webkit-progress-bar]:bg-rama/70 [&::-webkit-progress-value]:bg-pico"
+                      max={Math.max(1, t.size)}
+                      value={t.done}
+                      aria-label={`Progreso de ${t.name}`}
+                    />
+                    <span className="block font-mono text-xs text-liquen">
+                      {size(t.done)} de {size(t.size)} · {t.direction === 'toPhone' ? 'al celular' : 'del celular'}
+                    </span>
+                  </>
                 )}
-              </div>
-              <progress className="mt-1 h-1.5 w-full accent-pico" max={Math.max(1, t.size)} value={t.done} aria-label={`Progreso de ${t.name}`} />
-              <span className="text-xs text-liquen tabular-nums">
-                {size(t.done)} de {size(t.size)}
-              </span>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        </Card>
       )}
     </div>
   );

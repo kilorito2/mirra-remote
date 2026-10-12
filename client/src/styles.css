@@ -1,4 +1,5 @@
-@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
 @import 'tailwindcss';
 @import '../../src/shared/theme.css';
 
@@ -27,13 +28,14 @@
   }
 }
 
-@keyframes blink {
-  0%,
-  90%,
-  100% {
-    transform: scaleY(1);
+/* Pulso alrededor del logo mientras se espera a la PC. */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
   }
-  95% {
-    transform: scaleY(0.12);
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
   }
 }

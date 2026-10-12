@@ -115,7 +115,7 @@ function handleRequest(req: IncomingMessage, res: ServerResponse, opts: HttpServ
 
   if (path === '/ca.crt') {
     send(res, req, Buffer.from(opts.cert.caCertPem), 'application/x-x509-ca-cert', 'no-store', {
-      'Content-Disposition': 'attachment; filename="kilorito-remote-ca.crt"',
+      'Content-Disposition': 'attachment; filename="mirra-ca.crt"',
     });
     return;
   }

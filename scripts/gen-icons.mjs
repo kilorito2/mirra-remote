@@ -1,13 +1,12 @@
 // Genera los íconos PNG (app, tray, PWA) sin dependencias: rasterizado con supersampling + zlib.
-// Motivo: el ojo de un lorito sobre fondo selva; la variante "live" suma el aro rojo de sesión activa.
+// Motivo: la M de Mirra sobre el acento lavanda; la variante "live" de la bandeja pasa a rojo de sesión activa.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { deflateSync } from 'node:zlib';
 
-const SELVA = [0x0f, 0x26, 0x24];
-const HOJA = [0x24, 0x50, 0x4b];
-const PICO = [0xf2, 0xb3, 0x3d];
-const ALERTA = [0xff, 0x5a, 0x4e];
+const TINTA = [0x0a, 0x0b, 0x10];
+const ACENTO = [0x8b, 0x9b, 0xff];
+const ALERTA = [0xff, 0x5d, 0x6c];
 
 function crc32(buf) {
   let c = ~0;
@@ -72,38 +71,42 @@ function render(size, shape) {
   return out;
 }
 
-const dist = (u, v, cx, cy) => Math.hypot(u - cx, v - cy);
-
 function roundedSquare(u, v, radius) {
   const dx = Math.max(Math.abs(u - 0.5) - (0.5 - radius), 0);
   const dy = Math.max(Math.abs(v - 0.5) - (0.5 - radius), 0);
   return Math.hypot(dx, dy) <= radius;
 }
 
-function eye(live, { padded }) {
+// La M de Mirra en un viewBox de 48: polilínea con trazo redondo (distancia a los segmentos ≤ medio trazo).
+const M_POINTS = [[12.5, 35], [12.5, 13.5], [24, 27], [35.5, 13.5], [35.5, 35]].map(([x, y]) => [x / 48, y / 48]);
+const M_HALF_STROKE = 4.6 / 2 / 48;
+
+function distToSegment(u, v, [ax, ay], [bx, by]) {
+  const dx = bx - ax, dy = by - ay;
+  const t = Math.max(0, Math.min(1, ((u - ax) * dx + (v - ay) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(u - (ax + t * dx), v - (ay + t * dy));
+}
+
+function onMark(u, v, scale = 1) {
+  for (let i = 0; i < M_POINTS.length - 1; i++) {
+    if (distToSegment(u, v, M_POINTS[i], M_POINTS[i + 1]) <= M_HALF_STROKE * scale) return true;
+  }
+  return false;
+}
+
+/** Ícono de app: la M sobre el cuadrado redondeado de acento. */
+function mark() {
   return (u, v) => {
-    if (live && padded && Math.abs(dist(u, v, 0.5, 0.5) - 0.44) < 0.05) return [...ALERTA, 1];
-    const inset = padded ? 0.1 : 0;
-    const su = (u - inset) / (1 - 2 * inset);
-    const sv = (v - inset) / (1 - 2 * inset);
-    if (su < 0 || su > 1 || sv < 0 || sv > 1) return null;
-    if (!padded && !roundedSquare(su, sv, 0.22)) return null;
-    if (padded && dist(su, sv, 0.5, 0.5) > 0.5) return null;
-    const d = dist(su, sv, 0.5, 0.52);
-    if (d < 0.12 && dist(su, sv, 0.56, 0.47) < 0.12) return [...SELVA, 1]; // pupila
-    if (d < 0.27) return [...PICO, 1]; // iris
-    if (d < 0.33) return [...HOJA, 1]; // anillo de piel
-    return [...SELVA, 1];
+    if (!roundedSquare(u, v, 0.29)) return null;
+    return onMark(u, v) ? [...TINTA, 1] : [...ACENTO, 1];
   };
 }
 
+/** Bandeja (16/32 px): trazo más grueso para que se lea; en vivo el cuadrado pasa a rojo. */
 function trayIcon(live) {
   return (u, v) => {
-    const d = dist(u, v, 0.5, 0.5);
-    if (live && d > 0.36 && d <= 0.5) return [...ALERTA, 1];
-    if (d < 0.17 && dist(u, v, 0.56, 0.46) < 0.16) return [...SELVA, 1];
-    if (d <= (live ? 0.33 : 0.48)) return [...(live ? ALERTA : PICO), 1];
-    return null;
+    if (!roundedSquare(u, v, 0.26)) return null;
+    return onMark(u, v, 1.35) ? [...TINTA, 1] : [...(live ? ALERTA : ACENTO), 1];
   };
 }
 
@@ -114,14 +117,14 @@ const res = join(root, 'resources');
 for (const dir of [build, pub, res]) mkdirSync(dir, { recursive: true });
 
 const write = (path, size, shape) => writeFileSync(path, png(size, render(size, shape)));
-write(join(build, 'icon.png'), 256, eye(false, { padded: false }));
-write(join(res, 'icon.png'), 256, eye(false, { padded: false }));
+write(join(build, 'icon.png'), 256, mark());
+write(join(res, 'icon.png'), 256, mark());
 write(join(res, 'tray-idle.png'), 16, trayIcon(false));
 write(join(res, 'tray-idle@2x.png'), 32, trayIcon(false));
 write(join(res, 'tray-live.png'), 16, trayIcon(true));
 write(join(res, 'tray-live@2x.png'), 32, trayIcon(true));
-write(join(pub, 'icon-192.png'), 192, eye(false, { padded: false }));
-write(join(pub, 'icon-512.png'), 512, eye(false, { padded: false }));
-write(join(pub, 'apple-touch-icon.png'), 180, eye(false, { padded: false }));
-write(join(pub, 'favicon.png'), 32, eye(false, { padded: false }));
+write(join(pub, 'icon-192.png'), 192, mark());
+write(join(pub, 'icon-512.png'), 512, mark());
+write(join(pub, 'apple-touch-icon.png'), 180, mark());
+write(join(pub, 'favicon.png'), 32, mark());
 console.log('íconos generados');

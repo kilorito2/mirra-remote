@@ -1,15 +1,21 @@
-/* Paleta "lorito de noche", compartida por la UI de la PC y la web del celular. */
+/* Paleta "Mirra", compartida por la UI de la PC y la web del celular. */
 @theme {
-  --color-selva: #0f2624;
-  --color-hoja: #173532;
-  --color-rama: #24504b;
-  --color-pluma: #eaf2ec;
-  --color-liquen: #8fb0a8;
-  --color-pico: #f2b33d;
-  --color-pico-hondo: #c98c1c;
-  --color-alerta: #ff5a4e;
-  --font-sans: 'Bricolage Grotesque Variable', 'Segoe UI Variable', system-ui, sans-serif;
-  --text-pin: 2.75rem;
+  --color-selva: #0a0b10; /* fondo */
+  --color-hondo: #0d0f15; /* pozos: inputs, selector segmentado */
+  --color-hoja: #12141b; /* tarjetas y hojas */
+  --color-tecla: #151722; /* botones secundarios */
+  --color-linea: #1f2230; /* bordes de tarjeta y divisores */
+  --color-rama: #2c3042; /* bordes fuertes, interruptor apagado */
+  --color-pluma: #edeef3; /* texto */
+  --color-tenue: #b8bccc; /* texto secundario sobre tarjeta */
+  --color-liquen: #8b90a6; /* texto apagado */
+  --color-pico: #8b9bff; /* acento */
+  --color-pico-hondo: #7383f5;
+  --color-menta: #4fd6a8; /* conectado / listo */
+  --color-alerta: #ff5d6c;
+  --font-sans: 'Geist Variable', 'Segoe UI Variable', system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'Cascadia Mono', monospace;
+  --text-pin: 2.125rem;
   --radius-pill: 999px;
 }
 
@@ -33,6 +39,32 @@
     *::after {
       transition-duration: 0.01ms !important;
       animation-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Logo: un trazo recorre la M de punta a punta (pathLength = 100) y descansa antes de volver a empezar. */
+@keyframes m-run {
+  0% {
+    stroke-dashoffset: 32;
+  }
+  70%,
+  100% {
+    stroke-dashoffset: -104;
+  }
+}
+
+@layer components {
+  .m-run {
+    stroke-dasharray: 32 140;
+    stroke-dashoffset: 32;
+    animation: m-run 2.2s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .m-run {
+      animation: none;
+      stroke-dasharray: none;
     }
   }
 }

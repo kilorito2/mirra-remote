@@ -1,6 +1,6 @@
 appId: com.kilorito.remote
-productName: Kilorito Remote
-copyright: Kilorito Remote
+productName: Mirra
+copyright: Mirra
 directories:
   output: release
   buildResources: build
@@ -35,5 +35,5 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: Kilorito Remote
+  shortcutName: Mirra
   deleteAppDataOnUninstall: false

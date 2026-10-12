@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { APP_NAME } from '@shared/brand';
 import type { SessionEndReason } from '@shared/protocol';
 import { guessDeviceName } from './net/credentials';
 import { PinForm } from './screens/PinForm';
@@ -65,7 +66,7 @@ export function App({ token, createClient = defaultFactory }: { token: string | 
       case 'pendingApproval':
         return (
           <StatusScreen title="Aceptá la conexión en la PC" busy>
-            Kilorito Remote preguntó si {name} puede controlar la PC.
+            {APP_NAME} está preguntando si <span className="font-medium text-pluma">{name}</span> puede controlar la PC.
           </StatusScreen>
         );
       case 'busy':

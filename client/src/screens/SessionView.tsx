@@ -124,22 +124,26 @@ export function SessionView({ remote, reconnecting }: { remote: Remote; reconnec
       {statsOn && <StatsOverlay pc={getPc} />}
       <KeyboardInput ref={keyboard} sender={sender} modifiers={modifiers} onModifiersUsed={() => setModifiers([])} />
       {reconnecting && (
-        <p role="status" className="fixed top-3 left-1/2 z-20 -translate-x-1/2 rounded-pill bg-selva/90 px-4 py-2 text-sm">
+        <p
+          role="status"
+          className="fixed top-3.5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-pill border border-white/6 bg-selva/80 px-4 py-2 text-sm backdrop-blur-md"
+        >
+          <span aria-hidden="true" className="size-1.5 animate-pulse rounded-pill bg-pico" />
           Reconectando…
         </p>
       )}
       {modifiers.length > 0 && (
-        <p role="status" className="fixed top-3 left-3 z-20 rounded-pill bg-pico px-3 py-1.5 text-sm font-semibold text-selva">
+        <p role="status" className="fixed top-3.5 left-3.5 z-20 rounded-pill bg-pico px-3 py-1.5 text-[13px] font-semibold text-selva">
           {modifiers.map((m) => ({ ctrl: 'Ctrl', alt: 'Alt', shift: 'Shift', meta: 'Win' })[m]).join(' + ')} +
         </p>
       )}
       {sheet === 'more' && (
         <Sheet title="Más opciones" onClose={() => setSheet(null)}>
-          <div className="mb-4 flex flex-wrap gap-2">
-            <button type="button" className="min-h-11 rounded-lg bg-hoja px-4 font-semibold" onClick={() => setSheet('clipboard')}>
+          <div className="mb-5 grid grid-cols-2 gap-2">
+            <button type="button" className="min-h-12 rounded-xl border border-linea bg-tecla px-4 font-medium active:bg-rama" onClick={() => setSheet('clipboard')}>
               Portapapeles
             </button>
-            <button type="button" className="min-h-11 rounded-lg bg-hoja px-4 font-semibold" onClick={() => setSheet('files')}>
+            <button type="button" className="min-h-12 rounded-xl border border-linea bg-tecla px-4 font-medium active:bg-rama" onClick={() => setSheet('files')}>
               Archivos
             </button>
           </div>

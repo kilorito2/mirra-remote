@@ -50,7 +50,9 @@ export const FILE_MAX_TO_PHONE_BYTES = 512 * MiB;
 export const FILE_IPC_READ_BYTES = 256 * KiB;
 
 export const SESSION_HOTKEY = 'Control+Alt+Shift+K';
-export const DOWNLOADS_SUBDIR = 'Kilorito Remote';
+export const DOWNLOADS_SUBDIR = 'Mirra';
+/** Carpeta de datos de la app (nombre anterior a Mirra; ver src/main/index.ts). */
+export const LEGACY_USER_DATA_DIR = 'Kilorito Remote';
 
 export const CHANNELS = {
   inputFast: { label: 'input-fast', id: 0 },

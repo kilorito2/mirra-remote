@@ -8,6 +8,8 @@ export interface StatsSummary {
   frameWidth: number;
   frameHeight: number;
   codec: string | null;
+  /** Audio recibido: null si la PC no manda pista de audio; si no, paquetes acumulados y nivel (0–1). */
+  audio: { packets: number; level: number | null } | null;
 }
 
 interface InboundVideo {
@@ -24,6 +26,13 @@ interface InboundVideo {
   timestamp: number;
 }
 
+interface InboundAudio {
+  type: 'inbound-rtp';
+  kind?: string;
+  packetsReceived?: number;
+  audioLevel?: number;
+}
+
 interface CandidatePair {
   type: 'candidate-pair';
   nominated?: boolean;
@@ -38,9 +47,11 @@ export interface PreviousSample {
 
 export function summarizeStats(report: RTCStatsReport, previous: PreviousSample | null): { summary: StatsSummary; sample: PreviousSample | null } {
   let v: InboundVideo | null = null;
+  let a: InboundAudio | null = null;
   let rtt: number | null = null;
   for (const s of report.values() as IterableIterator<RTCStats>) {
     if (s.type === 'inbound-rtp' && (s as InboundVideo).kind === 'video') v = s as InboundVideo;
+    if (s.type === 'inbound-rtp' && (s as InboundAudio).kind === 'audio') a = s as InboundAudio;
     if (s.type === 'candidate-pair') {
       const pair = s as CandidatePair;
       if (pair.state === 'succeeded' && pair.nominated && pair.currentRoundTripTime !== undefined) rtt = pair.currentRoundTripTime * 1000;
@@ -67,6 +78,7 @@ export function summarizeStats(report: RTCStatsReport, previous: PreviousSample 
       frameWidth: v?.frameWidth ?? 0,
       frameHeight: v?.frameHeight ?? 0,
       codec: codecStats?.mimeType ?? null,
+      audio: a ? { packets: a.packetsReceived ?? 0, level: a.audioLevel ?? null } : null,
     },
     sample,
   };

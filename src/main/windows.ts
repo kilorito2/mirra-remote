@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { app, BrowserWindow, screen, session, type WebContents, type WebPreferences } from 'electron';
+import { APP_NAME } from '@shared/brand';
 
 export type RendererPage = 'index' | 'host' | 'overlay' | 'testpad';
 
@@ -63,7 +64,7 @@ export function createMainWindow(): BrowserWindow {
     minWidth: 380,
     minHeight: 560,
     show: false,
-    title: 'Kilorito Remote',
+    title: APP_NAME,
     backgroundColor: '#0F2624',
     autoHideMenuBar: true,
     icon: resourcePath('icon.png'),

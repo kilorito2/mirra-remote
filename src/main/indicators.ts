@@ -1,4 +1,5 @@
 import { BrowserWindow, Menu, Notification, Tray, nativeImage, screen, type Display } from 'electron';
+import { APP_NAME } from '@shared/brand';
 import { hardenWebContents, loadPage, resourcePath, securePreferences } from './windows';
 
 export interface TrayActions {
@@ -36,7 +37,7 @@ export class SessionIndicators {
     this.showOverlay(display);
     if (Notification.isSupported()) {
       new Notification({
-        title: 'Kilorito Remote',
+        title: APP_NAME,
         body: `${deviceName} está controlando esta PC. Ctrl+Alt+Shift+K corta la sesión.`,
         icon: resourcePath('icon.png'),
       }).show();
@@ -44,7 +45,7 @@ export class SessionIndicators {
   }
 
   notify(body: string): void {
-    if (Notification.isSupported()) new Notification({ title: 'Kilorito Remote', body, icon: resourcePath('icon.png') }).show();
+    if (Notification.isSupported()) new Notification({ title: APP_NAME, body, icon: resourcePath('icon.png') }).show();
   }
 
   /** Mueve el borde al monitor que se está transmitiendo. */
@@ -74,10 +75,10 @@ export class SessionIndicators {
 
   private refreshTray(deviceName: string | null): void {
     this.tray.setImage(this.icon(this.live));
-    this.tray.setToolTip(deviceName ? `Kilorito Remote: ${deviceName} conectado` : 'Kilorito Remote: esperando conexión');
+    this.tray.setToolTip(deviceName ? `${APP_NAME}: ${deviceName} conectado` : `${APP_NAME}: esperando conexión`);
     this.tray.setContextMenu(
       Menu.buildFromTemplate([
-        { label: 'Abrir Kilorito Remote', click: () => this.actions.open() },
+        { label: `Abrir ${APP_NAME}`, click: () => this.actions.open() },
         { label: 'Cortar sesión  (Ctrl+Alt+Shift+K)', enabled: this.live, click: () => this.actions.endSession() },
         { type: 'separator' },
         { label: 'Salir', click: () => this.actions.quit() },

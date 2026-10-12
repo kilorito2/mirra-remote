@@ -36,7 +36,8 @@ const COMBOS: { keys: KeyName[]; label: string }[] = [
 ];
 
 const keyClass =
-  'min-h-11 min-w-11 rounded-lg bg-hoja px-3 font-semibold tabular-nums text-pluma active:bg-rama aria-pressed:bg-pico aria-pressed:text-selva';
+  'min-h-11 min-w-11 rounded-[11px] border border-linea bg-tecla px-3 font-medium text-pluma transition-colors active:bg-rama aria-pressed:border-pico aria-pressed:bg-pico aria-pressed:font-semibold aria-pressed:text-selva';
+const pillClass = 'min-h-10 shrink-0 rounded-pill border border-linea px-3.5 text-sm text-pluma transition-colors active:bg-tecla';
 
 /**
  * R20: teclas especiales y combinaciones. Los modificadores quedan "pegados" hasta la próxima tecla
@@ -64,7 +65,7 @@ export function KeysSheet({
 
   return (
     <div className="space-y-4">
-      <div role="group" aria-label="Modificadores" className="flex flex-wrap gap-2">
+      <div role="group" aria-label="Modificadores" className="grid grid-cols-4 gap-1.5">
         {MODIFIER_KEYS.map((m) => (
           <button key={m} type="button" aria-pressed={modifiers.includes(m)} className={keyClass} onClick={() => toggle(m)}>
             {MOD_LABEL[m]}
@@ -72,7 +73,7 @@ export function KeysSheet({
         ))}
       </div>
 
-      <div role="group" aria-label="Teclas" className="flex flex-wrap gap-2">
+      <div role="group" aria-label="Teclas" className="grid grid-cols-4 gap-1.5 font-mono text-sm">
         {KEYS.map((k) => (
           <button key={k.key} type="button" className={keyClass} onClick={() => press(k.key)}>
             {k.label}
@@ -85,7 +86,7 @@ export function KeysSheet({
         ))}
       </div>
 
-      <div role="group" aria-label="Teclas de función" className="grid grid-cols-6 gap-2">
+      <div role="group" aria-label="Teclas de función" className="grid grid-cols-6 gap-1.5 font-mono text-sm">
         {FKEYS.map((k) => (
           <button key={k.key} type="button" className={keyClass} onClick={() => press(k.key)}>
             {k.label}
@@ -93,28 +94,28 @@ export function KeysSheet({
         ))}
       </div>
 
-      <div role="group" aria-label="Combinaciones" className="flex flex-wrap gap-2">
+      <div role="group" aria-label="Combinaciones" className="flex flex-wrap gap-1.5">
         {COMBOS.map((c) => (
-          <button key={c.label} type="button" className={keyClass} onClick={() => sender.combo(c.keys)}>
+          <button key={c.label} type="button" className={pillClass} onClick={() => sender.combo(c.keys)}>
             {c.label}
           </button>
         ))}
-        <button type="button" className={keyClass} onClick={() => setConfirmLock(true)}>
+        <button type="button" className={pillClass} onClick={() => setConfirmLock(true)}>
           Win+L
         </button>
         {/* No se puede enviar, pero se puede tocar para saber por qué. */}
-        <button type="button" className={`${keyClass} opacity-50`} aria-label="Ctrl+Alt+Supr, no disponible" onClick={() => setSasNote(true)}>
+        <button type="button" className={`${pillClass} opacity-50`} aria-label="Ctrl+Alt+Supr, no disponible" onClick={() => setSasNote(true)}>
           Ctrl+Alt+Supr
         </button>
       </div>
 
       {confirmLock && (
-        <div role="alertdialog" aria-label="Bloquear la PC" className="rounded-xl border border-pico/60 p-3">
+        <div role="alertdialog" aria-label="Bloquear la PC" className="rounded-2xl border border-pico/30 bg-pico/8 p-3.5">
           <p>Win+L bloquea la PC. Vas a perder el control hasta que alguien la desbloquee ahí.</p>
           <div className="mt-3 flex gap-2">
             <button
               type="button"
-              className="min-h-11 rounded-lg bg-pico px-4 font-semibold text-selva"
+              className="min-h-11 rounded-xl bg-pico px-4 font-semibold text-selva"
               onClick={() => {
                 sender.combo(['meta', 'l']);
                 setConfirmLock(false);
@@ -122,7 +123,7 @@ export function KeysSheet({
             >
               Bloquear igual
             </button>
-            <button type="button" className="min-h-11 rounded-lg px-4" onClick={() => setConfirmLock(false)}>
+            <button type="button" className="min-h-11 rounded-xl border border-rama px-4" onClick={() => setConfirmLock(false)}>
               Cancelar
             </button>
           </div>

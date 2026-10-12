@@ -2,12 +2,13 @@ import { desktopCapturer, session, webContents, type WebContents } from 'electro
 
 export interface CaptureTarget {
   displayId: string;
-  audio: boolean;
 }
 
 /**
  * R10: `getDisplayMedia()` del renderer host recibe la pantalla elegida (sin selector del sistema)
- * y el audio del sistema por loopback. Cualquier otro renderer recibe un rechazo.
+ * y el audio del sistema por loopback. El audio se captura siempre: el ajuste "Audio de la PC" solo habilita o
+ * silencia la pista (audio.set), así prenderlo con la sesión andando no exige volver a capturar.
+ * Cualquier otro renderer recibe un rechazo.
  */
 export function installCaptureHandler(isHost: (wc: WebContents | null) => boolean, target: () => CaptureTarget): void {
   session.defaultSession.setDisplayMediaRequestHandler(
@@ -17,7 +18,7 @@ export function installCaptureHandler(isHost: (wc: WebContents | null) => boolea
         callback({});
         return;
       }
-      const { displayId, audio } = target();
+      const { displayId } = target();
       desktopCapturer
         .getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } })
         .then((sources) => {
@@ -26,7 +27,7 @@ export function installCaptureHandler(isHost: (wc: WebContents | null) => boolea
             callback({});
             return;
           }
-          callback(audio ? { video: source, audio: 'loopback' } : { video: source });
+          callback({ video: source, audio: 'loopback' });
         })
         .catch(() => callback({}));
     },

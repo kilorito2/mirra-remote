@@ -1,13 +1,13 @@
 {
-  "name": "Kilorito Remote",
-  "short_name": "Kilorito",
+  "name": "Mirra",
+  "short_name": "Mirra",
   "description": "Controlá tu PC desde el celular",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "landscape",
-  "background_color": "#0F2624",
-  "theme_color": "#0F2624",
+  "background_color": "#0A0B10",
+  "theme_color": "#0A0B10",
   "lang": "es",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },

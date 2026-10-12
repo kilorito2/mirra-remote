@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 48 48" role="img" aria-label="Logo de Mirra">
+  <style>
+    .run { stroke-dasharray: 32 140; stroke-dashoffset: 32; animation: run 2.2s cubic-bezier(.45,0,.25,1) infinite; }
+    @keyframes run { 0% { stroke-dashoffset: 32; } 70%, 100% { stroke-dashoffset: -104; } }
+    @media (prefers-reduced-motion: reduce) { .run { animation: none; stroke-dasharray: none; } }
+  </style>
+  <rect width="48" height="48" rx="14" fill="#8B9BFF"/>
+  <g fill="none" stroke="#0A0B10" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12.5 35V13.5L24 27l11.5-13.5V35" opacity="0.3"/>
+    <path class="run" pathLength="100" d="M12.5 35V13.5L24 27l11.5-13.5V35"/>
+  </g>
+</svg>

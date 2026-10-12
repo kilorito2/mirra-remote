@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { QUALITY_PRESET_NAMES, type QualityPreset } from '@shared/constants';
+import { DOWNLOADS_SUBDIR, QUALITY_PRESET_NAMES, type QualityPreset } from '@shared/constants';
 import type { PhoneFiles, PhoneTransfer } from '../files/PhoneFiles';
 import type { InputSender } from '../input/InputSender';
 import { summarizeStats, type PreviousSample, type StatsSummary } from '../rtc/stats';
 import type { PcState } from '../useRemote';
 
-const btn = 'min-h-11 rounded-lg bg-hoja px-4 font-semibold text-pluma active:bg-rama aria-pressed:bg-pico aria-pressed:text-selva';
-const primary = 'min-h-11 rounded-lg bg-pico px-4 font-semibold text-selva active:bg-pico-hondo';
+const btn =
+  'min-h-11 rounded-xl border border-linea bg-tecla px-4 font-medium text-pluma transition-colors active:bg-rama aria-pressed:border-pico aria-pressed:bg-pico aria-pressed:text-selva';
+const primary = 'min-h-11 rounded-xl bg-pico px-4 font-semibold text-selva transition-colors active:bg-pico-hondo';
 
 /** R15: RTT, fps, bitrate y pérdida, cada segundo. */
 export function StatsOverlay({ pc }: { pc: () => RTCPeerConnection | null }) {
@@ -28,13 +29,13 @@ export function StatsOverlay({ pc }: { pc: () => RTCPeerConnection | null }) {
   const row = (label: string, value: string) => (
     <div className="flex justify-between gap-4">
       <dt className="text-liquen">{label}</dt>
-      <dd className="tabular-nums">{value}</dd>
+      <dd className="font-mono">{value}</dd>
     </div>
   );
   return (
     <dl
       aria-label="Estadísticas de la conexión"
-      className="pointer-events-none fixed top-3 left-3 z-20 min-w-44 rounded-xl bg-selva/85 px-3 py-2 text-sm backdrop-blur"
+      className="pointer-events-none fixed top-14 left-3 z-20 min-w-44 rounded-2xl border border-white/6 bg-selva/80 px-3.5 py-2.5 text-sm backdrop-blur-md"
     >
       {row('RTT', stats.rttMs === null ? '—' : `${stats.rttMs} ms`)}
       {row('fps', stats.fps === null ? '—' : String(Math.round(stats.fps)))}
@@ -42,6 +43,12 @@ export function StatsOverlay({ pc }: { pc: () => RTCPeerConnection | null }) {
       {row('Pérdida', stats.packetLossPct === null ? '—' : `${stats.packetLossPct} %`)}
       {row('Video', `${stats.frameWidth}×${stats.frameHeight}`)}
       {row('Codec', stats.codec?.replace('video/', '') ?? '—')}
+      {row(
+        'Audio',
+        stats.audio === null
+          ? 'sin pista'
+          : `${stats.audio.packets} paq.${stats.audio.level === null ? '' : ` · nivel ${Math.round(stats.audio.level * 100)} %`}`,
+      )}
     </dl>
   );
 }
@@ -110,7 +117,7 @@ export function ClipboardSheet({ sender, pcClipboard }: { sender: InputSender; p
           value={draft}
           onChange={(e) => setDraft(e.currentTarget.value)}
           rows={3}
-          className="mt-1 w-full rounded-lg border border-rama bg-hoja p-2"
+          className="mt-1.5 w-full rounded-xl border border-rama bg-hondo p-3"
           data-testid="clipboard-draft"
         />
       </label>
@@ -131,7 +138,7 @@ export function ClipboardSheet({ sender, pcClipboard }: { sender: InputSender; p
         </button>
       </div>
       {pcClipboard && (
-        <div className="rounded-lg border border-rama p-2">
+        <div className="rounded-xl border border-linea bg-hondo p-3">
           <p className="max-h-24 overflow-auto text-sm break-words whitespace-pre-wrap" data-testid="pc-clipboard">
             {pcClipboard.text || '(vacío)'}
           </p>
@@ -161,7 +168,7 @@ export function FilesSheet({ files, transfers }: { files: PhoneFiles; transfers:
   const input = useRef<HTMLInputElement>(null);
   return (
     <div className="space-y-3">
-      <p className="text-sm text-liquen">Lo que mandes queda en Descargas › Kilorito Remote en la PC. Lo que mande la PC se descarga acá.</p>
+      <p className="text-sm text-liquen">Lo que mandes queda en Descargas › {DOWNLOADS_SUBDIR} en la PC. Lo que mande la PC se descarga acá.</p>
       <input
         ref={input}
         type="file"
@@ -179,22 +186,22 @@ export function FilesSheet({ files, transfers }: { files: PhoneFiles; transfers:
       {transfers.length > 0 && (
         <ul className="space-y-2" aria-label="Transferencias">
           {[...transfers].reverse().map((t) => (
-            <li key={t.id} className="rounded-lg bg-hoja p-2">
+            <li key={t.id} className="rounded-xl border border-linea bg-hondo p-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate">
                   {t.direction === 'toPc' ? '↑ ' : '↓ '}
                   {t.name}
                 </span>
                 {t.state === 'running' ? (
-                  <button type="button" className="min-h-11 shrink-0 px-2 text-sm font-semibold text-alerta" onClick={() => files.cancel(t.id)}>
+                  <button type="button" className="min-h-11 shrink-0 px-2 text-sm font-medium text-alerta" onClick={() => files.cancel(t.id)}>
                     Cancelar
                   </button>
                 ) : (
                   <span className="shrink-0 text-sm text-liquen">{STATE_TEXT[t.state]}</span>
                 )}
               </div>
-              <progress className="mt-1 h-1.5 w-full accent-pico" max={Math.max(1, t.size)} value={t.done} aria-label={`Progreso de ${t.name}`} />
-              <span className="text-xs text-liquen tabular-nums">
+              <progress className="mt-2 block h-1 w-full overflow-hidden rounded-pill accent-pico [&::-webkit-progress-bar]:bg-rama/70 [&::-webkit-progress-value]:bg-pico" max={Math.max(1, t.size)} value={t.done} aria-label={`Progreso de ${t.name}`} />
+              <span className="font-mono text-xs text-liquen">
                 {formatBytes(t.done)} de {formatBytes(t.size)}
               </span>
             </li>
@@ -224,7 +231,7 @@ export function MoreSheet({
     <div className="space-y-4">
       {pcState && pcState.displays.length > 1 && (
         <fieldset>
-          <legend className="mb-2 font-medium">Pantalla</legend>
+          <legend className="mb-2 text-xs font-medium text-liquen">Pantalla</legend>
           <div className="flex flex-wrap gap-2">
             {pcState.displays.map((d, i) => (
               <button
@@ -241,7 +248,7 @@ export function MoreSheet({
         </fieldset>
       )}
       <fieldset>
-        <legend className="mb-2 font-medium">Calidad</legend>
+        <legend className="mb-2 text-xs font-medium text-liquen">Calidad</legend>
         <div className="flex flex-wrap gap-2">
           {QUALITY_PRESET_NAMES.map((p) => (
             <button key={p} type="button" className={btn} aria-pressed={pcState?.preset === p} onClick={() => sender.setQuality(p)}>

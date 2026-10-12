@@ -82,10 +82,6 @@ export class ElectronHostBridge implements HostBridge {
     return this.displayId;
   }
 
-  get audioEnabled(): boolean {
-    return this.deps.settings().audio;
-  }
-
   isHostContents(wc: WebContents | null): boolean {
     return !!wc && !!this.win && !this.win.isDestroyed() && wc.id === this.win.webContents.id;
   }

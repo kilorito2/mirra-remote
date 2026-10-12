@@ -1,7 +1,8 @@
 import { existsSync, readdirSync, statSync, statfsSync } from 'node:fs';
 import { join } from 'node:path';
 import { app, BrowserWindow, clipboard, dialog, globalShortcut, screen, type MessageBoxOptions, type Rectangle as Rect } from 'electron';
-import { CLIPBOARD_MAX, DOWNLOADS_SUBDIR, SESSION_HOTKEY } from '@shared/constants';
+import { APP_NAME } from '@shared/brand';
+import { CLIPBOARD_MAX, DOWNLOADS_SUBDIR, LEGACY_USER_DATA_DIR, SESSION_HOTKEY } from '@shared/constants';
 import type { KrTestHooks } from '@shared/testHooks';
 import { ElectronScreenSource, electronDisplay } from './adapters/ElectronScreenSource';
 import { FakeInjector } from './adapters/FakeInjector';
@@ -22,7 +23,9 @@ import { resolveTestMode } from './testMode';
 import { configurePermissions, createMainWindow, hardenWebContents, loadPage, securePreferences } from './windows';
 
 const testMode = resolveTestMode(process.env, app.isPackaged);
-if (testMode.userDataDir) app.setPath('userData', testMode.userDataDir);
+// La app se llamó "Kilorito Remote": su carpeta de datos (dispositivos emparejados, CA) conserva ese nombre para no
+// perder emparejamientos ni obligar a reinstalar el certificado en el celular al renombrarla a Mirra.
+app.setPath('userData', testMode.userDataDir ?? join(app.getPath('appData'), LEGACY_USER_DATA_DIR));
 
 // Se decide antes de `ready`: Chromium lee los switches al arrancar.
 const hardwareEncoding = testMode.hardwareEncoding ?? new SettingsStore(join(app.getPath('userData'), 'settings.json')).get().hardwareEncoding;
@@ -47,7 +50,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', () => showMainWindow());
   app.whenReady().then(boot).catch((err: unknown) => {
     console.error('[kr] arranque falló', err);
-    dialog.showErrorBox('Kilorito Remote', `No se pudo iniciar: ${err instanceof Error ? err.message : String(err)}`);
+    dialog.showErrorBox(APP_NAME, `No se pudo iniciar: ${err instanceof Error ? err.message : String(err)}`);
     app.exit(1);
   });
 }
@@ -91,7 +94,7 @@ const askUser: AskUser = async ({ deviceName, ip, method }, signal) => {
     defaultId: 0,
     cancelId: 0,
     noLink: true,
-    title: 'Kilorito Remote',
+    title: APP_NAME,
     message: `¿Permitir que ${deviceName} controle esta PC?`,
     detail: `Pedido con ${method === 'qr' ? 'el código QR' : 'el PIN'} desde ${ip}. Si no lo pediste vos, rechazalo. Va a ver la pantalla y usar el mouse y el teclado. Podés cortar en cualquier momento con Ctrl+Alt+Shift+K.`,
     signal,
@@ -222,7 +225,7 @@ async function boot(): Promise<void> {
   configurePermissions((wc) => hostRef.isHostContents(wc));
   installCaptureHandler(
     (wc) => hostRef.isHostContents(wc),
-    () => ({ displayId: hostRef.activeDisplayId, audio: hostRef.audioEnabled }),
+    () => ({ displayId: hostRef.activeDisplayId }),
   );
   screens.onDisplaysChanged(() => {
     inj.displaysChanged();
@@ -322,7 +325,7 @@ let testpad: BrowserWindow | null = null;
 async function ensureTestpad(): Promise<BrowserWindow> {
   if (testpad && !testpad.isDestroyed()) return testpad;
   // backgroundThrottling: false para que la animación siga aunque Chromium crea que el overlay la tapa.
-  const win = new BrowserWindow({ width: 520, height: 260, show: false, title: 'Kilorito testpad', alwaysOnTop: true, webPreferences: { ...securePreferences(), backgroundThrottling: false } });
+  const win = new BrowserWindow({ width: 520, height: 260, show: false, title: `${APP_NAME} testpad`, alwaysOnTop: true, webPreferences: { ...securePreferences(), backgroundThrottling: false } });
   hardenWebContents(win.webContents);
   await loadPage(win, 'testpad');
   testpad = win;

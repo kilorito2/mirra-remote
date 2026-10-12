@@ -1,8 +1,8 @@
 {
   "name": "kilorito-remote",
-  "productName": "Kilorito Remote",
-  "version": "0.1.0",
-  "description": "Control\u00e1 tu PC desde el celular por WiFi (WebRTC)",
+  "productName": "Mirra",
+  "version": "0.2.0",
+  "description": "Controlá tu PC desde el celular por WiFi (WebRTC)",
   "author": "kilorito",
   "license": "UNLICENSED",
   "private": true,
@@ -40,7 +40,8 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
-    "@fontsource-variable/bricolage-grotesque": "5.3.0",
+    "@fontsource-variable/geist": "5.3.0",
+    "@fontsource-variable/geist-mono": "5.3.0",
     "@playwright/test": "1.64.0",
     "@tailwindcss/vite": "4.3.3",
     "@testing-library/jest-dom": "7.0.1",
