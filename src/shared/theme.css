@@ -1,0 +1,38 @@
+/* Paleta "lorito de noche", compartida por la UI de la PC y la web del celular. */
+@theme {
+  --color-selva: #0f2624;
+  --color-hoja: #173532;
+  --color-rama: #24504b;
+  --color-pluma: #eaf2ec;
+  --color-liquen: #8fb0a8;
+  --color-pico: #f2b33d;
+  --color-pico-hondo: #c98c1c;
+  --color-alerta: #ff5a4e;
+  --font-sans: 'Bricolage Grotesque Variable', 'Segoe UI Variable', system-ui, sans-serif;
+  --text-pin: 2.75rem;
+  --radius-pill: 999px;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background: var(--color-selva);
+    color: var(--color-pluma);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-pico);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+}

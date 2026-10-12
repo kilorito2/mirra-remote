@@ -3,19 +3,19 @@
 Verificación estándar de cada tarea: `npm run typecheck && npm run lint && npm test` (+ la indicada).
 
 ## Fase 1 — Base, seguridad y entorno de test
-- [ ] 1.1 Scaffolding electron-vite (main/preload/renderer) + client Vite + shared, TS strict, ESLint, Vitest, Playwright, Tailwind. Acc: `npm run dev` abre la ventana; `check` verde. Files: package.json, configs, src/*, client/*
-- [ ] 1.2 `shared/protocol.ts` + `constants.ts` con todos los schemas de PROTOCOL.md. Acc: tests de casos válidos/ inválidos por mensaje (strict, rangos, Ctrl+Alt+Supr rechazado).
-- [ ] 1.3 Allowlist IP + rate limiter + gating de test mode (puros). Acc: tests RFC1918/link-local/ULA/CGNAT/IPv4-mapped; loopback rechazado sin test mode.
-- [ ] 1.4 Certificados (CA + leaf con SAN, regeneración por IP) + server HTTPS estático con headers y filtro TCP + `/ca.crt`. Acc: test de integración con `https.get` (headers, 404, traversal).
-- [ ] 1.5 Token (32 B, uso único, 2 min, rotación) y PIN (6 dígitos, 2 min, 5/IP → 5 min, 10 global → regenera). Acc: tests con reloj falso.
-- [ ] 1.6 DeviceStore (secreto cifrado con un `Cipher` inyectado = safeStorage) + HMAC challenge. Acc: tests de HMAC compatible con WebCrypto, nonce de un uso y vencimiento, revocar.
-- [ ] 1.7 Signaling WS (máquina de estados, Origin, timeouts, BUSY, errores). Acc: test de integración con cliente `ws` real: pairing, auth, BUSY, AUTH_FAILED, token reusado.
-- [ ] 1.8 UI de PC: QR/PIN/IPs/estado/dispositivos/revocar/primer arranque + diálogo de aprobación + preload `ui` + validación de sender. Acc: tests de componentes; manual en dev.
-- [ ] 1.9 Client: pantallas de pairing (QR fragment, PIN), credenciales en localStorage, HMAC con `crypto.subtle`, reconexión. Acc: tests de componentes + E2E.
-- [ ] 1.10 Indicadores: tray rojo, overlay con borde (content protection), notificación, Ctrl+Alt+Shift+K. Acc: E2E verifica estado vía API de test.
-- [ ] 1.11 E2E desktop (Chromium móvil + WebKit): QR, PIN, no emparejado rechazado, token reusado rechazado, revocado rechazado.
-- [ ] 1.12 Android: `android:setup` (JDK, cmdline-tools, imagen 34 google_apis, AVD remote-test) + esqueleto `test:android` que empareja por QR y PIN.
-- [ ] Checkpoint F1: security-review + review + simplify; PROGRESS; commit `feat(fase-1): ...`
+- [x] 1.1 Scaffolding electron-vite (main/preload/renderer) + client Vite + shared, TS strict, ESLint, Vitest, Playwright, Tailwind. Acc: `npm run dev` abre la ventana; `check` verde. Files: package.json, configs, src/*, client/*
+- [x] 1.2 `shared/protocol.ts` + `constants.ts` con todos los schemas de PROTOCOL.md. Acc: tests de casos válidos/ inválidos por mensaje (strict, rangos, Ctrl+Alt+Supr rechazado).
+- [x] 1.3 Allowlist IP + rate limiter + gating de test mode (puros). Acc: tests RFC1918/link-local/ULA/CGNAT/IPv4-mapped; loopback rechazado sin test mode.
+- [x] 1.4 Certificados (CA + leaf con SAN, regeneración por IP) + server HTTPS estático con headers y filtro TCP + `/ca.crt`. Acc: test de integración con `https.get` (headers, 404, traversal).
+- [x] 1.5 Token (32 B, uso único, 2 min, rotación) y PIN (6 dígitos, 2 min, 5/IP → 5 min, 10 global → regenera). Acc: tests con reloj falso.
+- [x] 1.6 DeviceStore (secreto cifrado con un `Cipher` inyectado = safeStorage) + HMAC challenge. Acc: tests de HMAC compatible con WebCrypto, nonce de un uso y vencimiento, revocar.
+- [x] 1.7 Signaling WS (máquina de estados, Origin, timeouts, BUSY, errores). Acc: test de integración con cliente `ws` real: pairing, auth, BUSY, AUTH_FAILED, token reusado.
+- [x] 1.8 UI de PC: QR/PIN/IPs/estado/dispositivos/revocar/primer arranque + diálogo de aprobación + preload `ui` + validación de sender. Acc: tests de componentes; manual en dev.
+- [x] 1.9 Client: pantallas de pairing (QR fragment, PIN), credenciales en localStorage, HMAC con `crypto.subtle`, reconexión. Acc: tests de componentes + E2E.
+- [x] 1.10 Indicadores: tray rojo, overlay con borde (content protection), notificación, Ctrl+Alt+Shift+K. Acc: E2E verifica estado vía API de test.
+- [x] 1.11 E2E desktop (Chromium móvil + WebKit): QR, PIN, no emparejado rechazado, token reusado rechazado, revocado rechazado.
+- [x] 1.12 Android: `android:setup` (JDK, cmdline-tools, imagen 34 google_apis, AVD remote-test) + esqueleto `test:android` que empareja por QR y PIN.
+- [x] Checkpoint F1: security-review + review + simplify; PROGRESS; commit `feat(fase-1): ...`
 
 ## Fase 2 — Video
 - [ ] 2.1 Renderer host + `setDisplayMediaRequestHandler` + HostPeer (oferta, DataChannels negociados, relay de signaling por IPC).

@@ -1,0 +1,13 @@
+@import '@fontsource-variable/bricolage-grotesque';
+@import 'tailwindcss';
+@import '../../shared/theme.css';
+
+@layer base {
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    user-select: none;
+  }
+}

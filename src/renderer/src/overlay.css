@@ -1,0 +1,16 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+}
+
+/* Borde de sesión activa: mismo rojo que el tray. Click-through y fuera de la captura (setContentProtection). */
+.frame {
+  position: fixed;
+  inset: 0;
+  border: 4px solid #ff5a4e;
+  box-shadow: inset 0 0 0 1px rgb(15 38 36 / 0.6);
+  pointer-events: none;
+}

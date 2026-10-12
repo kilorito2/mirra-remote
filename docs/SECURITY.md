@@ -21,6 +21,8 @@
 | Replay de autenticación | nonce aleatorio de 32 B, un uso, 30 s; `timingSafeEqual` | `main/auth/challenge.ts` |
 | Secreto expuesto en reposo | `safeStorage` (DPAPI) para secretos y claves privadas | `main/auth/deviceStore.ts`, `main/server/certs.ts` |
 | CSWSH (otro sitio abre el WS) | `Origin` debe ser `https://<Host>`; además hace falta el secreto | `main/server/signaling.ts` |
+| DNS rebinding | `Host` solo IP literal o `localhost`; además el certificado no coincide con el dominio del atacante | `isIpOrLocalhostHost` |
+| Agotamiento de conexiones | máx. 16 WS sin autenticar; 15 s para autenticar (salvo esperando aprobación); `maxPayload` 64 KiB, sin deflate | `signaling.ts` |
 | Input malformado / desbordes | zod strict en host y en main; clamp de coordenadas; límites de tamaño | `shared/protocol.ts`, `main/session/InputController.ts` |
 | Flood de input | token bucket 500/s (ráfaga 100) → descarta y avisa | `InputController` |
 | Teclas trabadas | registro de teclas/botones; `releaseAll` en heartbeat 3 s, cierre de canal, fin de sesión, crash del host | `InputController` |
@@ -31,10 +33,16 @@
 | Sesión olvidada abierta | tray rojo, borde, notificación, atajo global de corte | `main/session/indicators.ts` |
 | Logs con secretos | no se loguean token, PIN, nonce, secret ni HMAC | revisión |
 
+## Credenciales en el celular
+`deviceId` + `deviceSecret` van en localStorage (pedido del diseño). Riesgo: un XSS en el origen podría leerlos. Mitigación:
+CSP `script-src 'self'`, sin scripts de terceros, sin `innerHTML`/`dangerouslySetInnerHTML`, todo el contenido externo
+renderizado por React (escapado). Revocar desde la PC invalida el secreto.
+
 ## Límites conocidos
 - Si el usuario acepta una advertencia de certificado distinta (MITM activo en la LAN) durante el emparejamiento,
   un atacante podría hacer de intermediario. Mitigación: instalar la CA local (ADR-0001) o emparejar solo en redes de confianza.
 - No se puede controlar el escritorio seguro (UAC, login, Ctrl+Alt+Supr) ni ventanas elevadas.
 - Contenido DRM se ve negro.
 
-Revisiones de seguridad: ver la sección correspondiente en `docs/PROGRESS.md`.
+## Revisiones
+- 2026-10-12, cierre Fase 1: timeout de aprobación, tope de conexiones, Host IP-only. Ver PROGRESS.md.

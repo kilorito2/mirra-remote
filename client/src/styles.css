@@ -1,0 +1,39 @@
+@import '@fontsource-variable/bricolage-grotesque';
+@import 'tailwindcss';
+@import '../../src/shared/theme.css';
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+
+  /* iOS hace zoom si un input tiene menos de 16px. */
+  input,
+  textarea,
+  select {
+    font-size: max(1rem, 16px);
+  }
+}
+
+@keyframes blink {
+  0%,
+  90%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.12);
+  }
+}
